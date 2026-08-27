@@ -1,87 +1,62 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import Anthropic from '@anthropic-ai/sdk'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
+const client = new Anthropic()
 
-type ChatRequest = {
-  method?: string;
-  body?: unknown;
-};
+// Load system prompt from assets
+const systemPromptPath = resolve(process.cwd(), 'assets', 'system_prompt.md')
+const systemPrompt = readFileSync(systemPromptPath, 'utf-8')
 
-type ChatResponse = {
-  status(code: number): ChatResponse;
-  json(body: { reply: string } | { error: string }): void;
-};
-
-function isChatMessage(value: unknown): value is ChatMessage {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const message = value as Record<string, unknown>;
-  return (
-    Object.keys(message).length === 2 &&
-    (message.role === "user" || message.role === "assistant") &&
-    typeof message.content === "string"
-  );
+interface PatientContext {
+  name?: string
+  age?: number
+  weight?: number
+  context?: string
 }
 
-function parseMessages(body: unknown): ChatMessage[] | null {
-  if (typeof body !== "object" || body === null) {
-    return null;
-  }
-
-  const requestBody = body as Record<string, unknown>;
-  if (Object.keys(requestBody).length !== 1 || !Array.isArray(requestBody.messages)) {
-    return null;
-  }
-
-  return requestBody.messages.every(isChatMessage) ? requestBody.messages : null;
+interface RequestBody {
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>
+  patientContext?: PatientContext
 }
 
-export default async function handler(req: ChatRequest, res: ChatResponse): Promise<void> {
-  if (req.method !== "POST") {
-    res.status(400).json({ error: "Invalid request" });
-    return;
-  }
-
-  const messages = parseMessages(req.body);
-  if (messages === null) {
-    res.status(400).json({ error: "Invalid request" });
-    return;
-  }
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "Server not configured" });
-    return;
+export default async function handler(req: any, res: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const assetsDirectory = join(process.cwd(), "assets");
-    const systemPrompt = readFileSync(join(assetsDirectory, "system_prompt.md"), "utf8");
-    const knowledgeBase = readFileSync(join(assetsDirectory, "knowledge_base.md"), "utf8");
-    const system = systemPrompt.replace("{{KNOWLEDGE_BASE}}", knowledgeBase);
+    const { messages, patientContext }: RequestBody = req.body
 
-    const anthropic = new Anthropic({ apiKey });
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      system,
-      messages,
-    });
-    const reply = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("");
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Messages array is required' })
+    }
 
-    res.status(200).json({ reply });
-  } catch (error: unknown) {
-    console.error("Anthropic API request failed", error);
-    res.status(502).json({ error: "Something went wrong \u2014 try again" });
+    // Build final system prompt with patient context if provided
+    let finalSystemPrompt = systemPrompt
+    if (patientContext?.context) {
+      finalSystemPrompt = `${systemPrompt}\n\n${patientContext.context}`
+    }
+
+    // Call Anthropic API
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: finalSystemPrompt,
+      messages: messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+    })
+
+    const reply =
+      response.content[0].type === 'text' ? response.content[0].text : ''
+
+    return res.status(200).json({ reply })
+  } catch (error) {
+    console.error('API error:', error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+    return res.status(500).json({ error: errorMessage })
   }
 }
