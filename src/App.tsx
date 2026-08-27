@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import Composer from './components/Composer'
 import Header from './components/Header'
 import MessageList from './components/MessageList'
@@ -11,32 +11,47 @@ export interface Message {
 function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [pending, setPending] = useState(false)
-  const responseTimer = useRef<number | null>(null)
 
-  useEffect(() => {
-    return () => {
-      if (responseTimer.current !== null) {
-        window.clearTimeout(responseTimer.current)
-      }
-    }
-  }, [])
-
-  const handleSend = (content: string) => {
+  const handleSend = async (content: string) => {
     if (pending || content.trim().length === 0) {
       return
     }
 
-    setMessages((current) => [...current, { role: 'user', content }])
+    const userMessage: Message = { role: 'user', content }
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
     setPending(true)
 
-    responseTimer.current = window.setTimeout(() => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: updatedMessages }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'API request failed')
+      }
+
+      const data = await response.json()
       setMessages((current) => [
         ...current,
-        { role: 'assistant', content: 'SAMPLE RESPONSE' },
+        { role: 'assistant', content: data.reply },
       ])
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      setMessages((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          content: `Error: ${errorMessage}`,
+        },
+      ])
+    } finally {
       setPending(false)
-      responseTimer.current = null
-    }, 600)
+    }
   }
 
   return (
