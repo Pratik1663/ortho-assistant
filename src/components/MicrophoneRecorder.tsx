@@ -39,6 +39,7 @@ const getSpeechRecognition = (): SpeechRecognitionConstructor | null => {
 interface MicrophoneRecorderProps {
   disabled: boolean
   onTranscript: (text: string) => void
+  onInterim?: (text: string) => void
 }
 
 // Voice dictation using the browser's built-in speech recognition.
@@ -46,6 +47,7 @@ interface MicrophoneRecorderProps {
 export default function MicrophoneRecorder({
   disabled,
   onTranscript,
+  onInterim,
 }: MicrophoneRecorderProps) {
   const [recording, setRecording] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
@@ -65,6 +67,7 @@ export default function MicrophoneRecorder({
     recognitionRef.current?.stop()
     recognitionRef.current = null
     setRecording(false)
+    onInterim?.('')
   }
 
   const start = () => {
@@ -74,28 +77,47 @@ export default function MicrophoneRecorder({
     }
     const recognition = new Recognition()
     recognition.continuous = true
-    recognition.interimResults = false
-    recognition.lang = 'en-CA'
+    recognition.interimResults = true
+    // Use the browser's default language — setting an explicit locale makes
+    // some browsers (notably Edge) fail silently with language-not-supported.
     recognition.onresult = (event) => {
+      let interim = ''
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const result = event.results[i]
-        if (result.isFinal && result[0]?.transcript) {
-          onTranscript(result[0].transcript.trim())
+        const transcript = result[0]?.transcript ?? ''
+        if (result.isFinal && transcript.trim()) {
+          onTranscript(transcript.trim())
+        } else if (transcript) {
+          interim += transcript
         }
       }
+      onInterim?.(interim.trim())
     }
     recognition.onend = () => {
       recognitionRef.current = null
       setRecording(false)
+      onInterim?.('')
     }
     recognition.onerror = (event) => {
-      if (event.error === 'not-allowed') {
+      const error = event.error ?? ''
+      if (error === 'not-allowed' || error === 'service-not-allowed') {
         window.alert(
-          'Microphone access was blocked. Allow microphone access in your browser to use dictation.',
+          'Microphone access was blocked. Click the padlock/mic icon in the address bar and allow the microphone, then try again.',
         )
+      } else if (error === 'language-not-supported') {
+        window.alert(
+          "This browser doesn't support dictation for your language. Chrome works best for dictation.",
+        )
+      } else if (error === 'network') {
+        window.alert(
+          'The speech service could not be reached. Check your internet connection and try again.',
+        )
+      } else if (error !== 'no-speech' && error !== 'aborted') {
+        window.alert(`Dictation stopped (${error || 'unknown error'}). Please try again.`)
       }
       recognitionRef.current = null
       setRecording(false)
+      onInterim?.('')
     }
     recognitionRef.current = recognition
     recognition.start()

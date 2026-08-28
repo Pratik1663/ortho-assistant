@@ -11,6 +11,7 @@ interface ComposerProps {
 
 function Composer({ onSend, pending, patientName }: ComposerProps) {
   const [content, setContent] = useState('')
+  const [interim, setInterim] = useState('')
   const [attachments, setAttachments] = useState<OutgoingAttachment[]>([])
   const isEmpty = content.trim().length === 0 && attachments.length === 0
 
@@ -56,21 +57,29 @@ function Composer({ onSend, pending, patientName }: ComposerProps) {
       {attachments.length > 0 && (
         <div className="attachment-previews">
           {attachments.map((attachment, index) => (
-            <span className="attachment-chip" key={`${attachment.name}-${index}`}>
-              <span className="attachment-chip-icon" aria-hidden="true">
-                {attachment.mediaType === 'application/pdf' ? '📄' : '🖼️'}
-              </span>
-              {attachment.name}
+            <div className="attachment-thumb" key={`${attachment.name}-${index}`}>
+              {attachment.mediaType === 'application/pdf' ? (
+                <div className="attachment-thumb-file" title={attachment.name}>
+                  <span aria-hidden="true">📄</span>
+                  <span className="attachment-thumb-name">{attachment.name}</span>
+                </div>
+              ) : (
+                <img
+                  alt={attachment.name}
+                  src={`data:${attachment.mediaType};base64,${attachment.data}`}
+                  title={attachment.name}
+                />
+              )}
               <button
                 aria-label={`Remove ${attachment.name}`}
-                className="attachment-remove"
+                className="attachment-x"
                 disabled={pending}
                 onClick={() => removeAttachment(index)}
                 type="button"
               >
                 ×
               </button>
-            </span>
+            </div>
           ))}
         </div>
       )}
@@ -83,7 +92,11 @@ function Composer({ onSend, pending, patientName }: ComposerProps) {
               setAttachments((current) => [...current, attachment])
             }
           />
-          <MicrophoneRecorder disabled={pending} onTranscript={appendTranscript} />
+          <MicrophoneRecorder
+            disabled={pending}
+            onInterim={setInterim}
+            onTranscript={appendTranscript}
+          />
         </div>
         <textarea
           aria-label="Message"
@@ -98,6 +111,11 @@ function Composer({ onSend, pending, patientName }: ComposerProps) {
           Send
         </button>
       </div>
+      {interim && (
+        <div aria-live="polite" className="dictation-preview">
+          🎤 {interim}…
+        </div>
+      )}
     </div>
   )
 }

@@ -520,3 +520,78 @@ textarea:focus-visible {
   color: #1f7a5c;
   font-weight: 600;
 }
+
+.dictation-preview {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #5b6b83;
+  font-style: italic;
+}
+
+/* Attachment thumbnails with corner remove button */
+.attachment-thumb {
+  position: relative;
+  display: inline-flex;
+}
+
+.attachment-thumb img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #d5dce6;
+  display: block;
+}
+
+.attachment-thumb-file {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  border: 1px solid #d5dce6;
+  background: #eef2f7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 1.3rem;
+  padding: 4px;
+}
+
+.attachment-thumb-name {
+  font-size: 0.6rem;
+  color: #1a2b4a;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-x {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #e05b5b;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(16, 30, 54, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachment-x:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.attachment-x:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
