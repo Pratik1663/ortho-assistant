@@ -130,9 +130,11 @@ export default function DoctorView({
     <div className="doctor-view">
       <aside className="sidebar" aria-label="Patient list">
         <div className="brand-block">
-          <div className="brand-mark" aria-hidden="true">OA</div>
+          <div className="brand-mark" aria-hidden="true">
+            <img alt="LEO Lab" className="leo-sidebar-logo" src="/leo-logo.png" />
+          </div>
           <div>
-            <strong>Orthotic Assistant</strong>
+            <strong>LEOPA</strong>
             <span>Clinical workflow</span>
           </div>
         </div>
@@ -230,9 +232,9 @@ export default function DoctorView({
           <div className="quick-workspace">
             <div className="workspace-heading simple">
               <div>
-                <p className="workspace-kicker">Knowledge-base assistant</p>
+                <p className="workspace-kicker">LEOPA — Knowledge-base assistant</p>
                 <h1>Quick Q&amp;A</h1>
-                <p>Ask a general fabrication or workflow question without patient context.</p>
+                <p>Ask LEOPA a general fabrication or workflow question without patient context.</p>
               </div>
             </div>
             <div className="chat-container">

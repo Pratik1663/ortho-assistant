@@ -91,12 +91,15 @@ export default function AdminDashboard({
   return (
     <div className="admin-dashboard">
       <header className="admin-header">
-        <div>
+        <div className="leo-header-brand">
+          <img alt="LEO Lab" className="leo-header-logo" src="/leo-logo.png" />
+          <div>
           <p className="view-kicker">Clinic Admin Dashboard</p>
           <h1>{clinic.name}</h1>
           <p className="admin-identity">
             Logged in as {session.name} ({session.email})
           </p>
+          </div>
         </div>
         <button className="btn-logout" onClick={onLogout} type="button">
           Logout

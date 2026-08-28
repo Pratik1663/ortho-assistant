@@ -1,0 +1,238 @@
+/* ============================================================
+   LEO LAB BRAND THEME — loaded last so it wins over base styles
+   Palette from leolab.ca: dark header #1a1a1c, brand red #d21f2f,
+   deep navy hero #141a5e → #0e1140, accent blue #2f9df6
+   ============================================================ */
+
+:root {
+  --leo-red: #d21f2f;
+  --leo-red-dark: #a91824;
+  --leo-dark: #1a1a1c;
+  --leo-navy: #141a5e;
+  --leo-navy-deep: #0e1140;
+  --leo-blue: #2f9df6;
+  --leo-white: #ffffff;
+}
+
+/* ---------- Login / signup screen: navy hero with geometric lines ---------- */
+.doctor-login-container {
+  background:
+    repeating-linear-gradient(115deg, transparent 0 140px, rgba(255, 255, 255, 0.04) 140px 142px),
+    repeating-linear-gradient(25deg, transparent 0 180px, rgba(10, 12, 48, 0.55) 180px 183px),
+    linear-gradient(135deg, var(--leo-navy) 0%, var(--leo-navy-deep) 70%, #0a0c30 100%);
+}
+
+.doctor-login-card {
+  border-top: 4px solid var(--leo-red);
+}
+
+.leo-login-logo {
+  display: block;
+  margin: 0 auto 14px;
+  background: var(--leo-dark);
+  border-radius: 10px;
+  padding: 10px 18px;
+  width: fit-content;
+}
+
+.leo-login-logo img {
+  display: block;
+  height: 42px;
+  width: auto;
+}
+
+.leo-tagline {
+  text-align: center;
+  color: #5b6b83;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: -6px 0 18px;
+}
+
+.auth-tab.active {
+  color: var(--leo-red);
+}
+
+/* ---------- Primary actions in brand red ---------- */
+.btn-login,
+.btn-primary,
+.workflow-primary,
+.composer button[type='button']:not(.composer-tool-btn):not(.attachment-x) {
+  background: var(--leo-red);
+  border-color: var(--leo-red);
+  color: var(--leo-white);
+}
+
+.btn-login:hover,
+.btn-primary:hover,
+.workflow-primary:hover:not(:disabled),
+.composer button[type='button']:not(.composer-tool-btn):not(.attachment-x):hover:not(:disabled) {
+  background: var(--leo-red-dark);
+  border-color: var(--leo-red-dark);
+}
+
+.btn-primary.secondary {
+  background: var(--leo-white);
+  color: var(--leo-dark);
+  border: 1px solid #d5dce6;
+}
+
+.btn-primary.secondary:hover {
+  background: #f0f4f9;
+}
+
+/* ---------- Doctor sidebar: dark like the site header ---------- */
+.sidebar {
+  background: var(--leo-dark);
+  color: #e8eaf1;
+}
+
+.sidebar .brand-block strong,
+.sidebar .sidebar-header h2,
+.sidebar .doctor-name,
+.sidebar .patient-name {
+  color: var(--leo-white);
+}
+
+.sidebar .brand-block span,
+.sidebar .sidebar-kicker,
+.sidebar .doctor-label,
+.sidebar .doctor-email,
+.sidebar .patient-meta,
+.sidebar .sidebar-empty {
+  color: #a7abbd;
+}
+
+.brand-mark {
+  background: transparent;
+  padding: 0;
+}
+
+.leo-sidebar-logo {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+.sidebar .quick-entry,
+.sidebar .patient-item {
+  background: #242428;
+  border-color: #35353c;
+  color: #e8eaf1;
+}
+
+.sidebar .quick-entry:hover:not(:disabled),
+.sidebar .patient-item:hover:not(:disabled) {
+  background: #2d2d33;
+}
+
+.sidebar .quick-entry.active,
+.sidebar .patient-item.active {
+  background: #2a1013;
+  border-color: var(--leo-red);
+}
+
+.sidebar .quick-entry.active .quick-icon,
+.sidebar .patient-item.active .patient-avatar {
+  background: var(--leo-red);
+  color: var(--leo-white);
+}
+
+.sidebar .patient-count {
+  background: var(--leo-red);
+  color: var(--leo-white);
+}
+
+.sidebar .btn-logout {
+  background: transparent;
+  border: 1px solid #45454d;
+  color: #e8eaf1;
+}
+
+.sidebar .btn-logout:hover {
+  border-color: var(--leo-red);
+  color: var(--leo-red);
+}
+
+/* ---------- Receptionist & admin headers: dark navy band with logo ---------- */
+.receptionist-header,
+.admin-header {
+  background: linear-gradient(120deg, var(--leo-navy) 0%, var(--leo-navy-deep) 100%);
+  border-bottom: 3px solid var(--leo-red);
+}
+
+.receptionist-header h1,
+.admin-header h1 {
+  color: var(--leo-white);
+}
+
+.receptionist-header .view-kicker,
+.admin-header .view-kicker,
+.admin-header .admin-identity {
+  color: #b8bede;
+}
+
+.leo-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.leo-header-logo {
+  height: 34px;
+  width: auto;
+  background: var(--leo-dark);
+  border-radius: 8px;
+  padding: 6px 10px;
+  box-sizing: content-box;
+}
+
+.receptionist-header .mode-toggle,
+.admin-header .btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: var(--leo-white);
+}
+
+.receptionist-header .mode-toggle:hover,
+.admin-header .btn-logout:hover {
+  border-color: var(--leo-red);
+  background: var(--leo-red);
+}
+
+/* ---------- Tabs & accents ---------- */
+.receptionist-tabs .tab.active {
+  background: var(--leo-red);
+  border-color: var(--leo-red);
+  color: var(--leo-white);
+}
+
+.stat-value {
+  color: var(--leo-navy);
+}
+
+.stat-card {
+  border-top: 3px solid var(--leo-red);
+}
+
+.template-indicator {
+  color: var(--leo-red);
+}
+
+.approved-badge {
+  color: #1f7a5c;
+}
+
+.document-option.selected {
+  border-color: var(--leo-red);
+}
+
+.document-option.selected .document-icon {
+  background: var(--leo-red);
+  color: var(--leo-white);
+}
+
+.mic-btn.recording {
+  border-color: var(--leo-red);
+}

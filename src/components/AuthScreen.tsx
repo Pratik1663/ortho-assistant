@@ -58,9 +58,13 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
   return (
     <div className="doctor-login-container">
       <div className="doctor-login-card auth-card">
+        <div className="leo-login-logo">
+          <img alt="LEO Lab" src="/leo-logo.png" />
+        </div>
+        <p className="leo-tagline">Precision Custom Orthotics</p>
         <div className="login-header">
-          <h1>🦶 Orthotic Prescription Assistant</h1>
-          <p>Clinic sign in</p>
+          <h1>LEOPA</h1>
+          <p>Leading Edge Orthotics Prescription Assistant — Clinic sign in</p>
         </div>
 
         <div className="auth-tabs">

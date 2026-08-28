@@ -122,9 +122,12 @@ export default function ReceptionistView({
   return (
     <div className="receptionist-view">
       <header className="receptionist-header">
-        <div>
-          <p className="view-kicker">{clinicName} — Reception</p>
-          <h1>Patient Management</h1>
+        <div className="leo-header-brand">
+          <img alt="LEO Lab" className="leo-header-logo" src="/leo-logo.png" />
+          <div>
+            <p className="view-kicker">{clinicName} — Reception</p>
+            <h1>Patient Management</h1>
+          </div>
         </div>
         <button className="mode-toggle" onClick={onLogout} type="button">
           Logout
