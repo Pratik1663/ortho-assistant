@@ -1,0 +1,839 @@
+.doctor-view {
+  display: flex;
+  height: 100vh;
+  min-height: 660px;
+  overflow: hidden;
+  background: #eef2f0;
+}
+
+.sidebar {
+  display: flex;
+  flex: 0 0 286px;
+  flex-direction: column;
+  min-width: 0;
+  color: #fff;
+  background: linear-gradient(180deg, #0d3d37 0%, #175a52 62%, #114b43 100%);
+  box-shadow: 5px 0 24px rgb(10 56 49 / 12%);
+}
+
+.brand-block {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 21px 18px 17px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+}
+
+.brand-mark {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(241 201 74 / 42%);
+  border-radius: 11px;
+  color: #f1c94a;
+  background: rgb(241 201 74 / 13%);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.brand-block strong,
+.brand-block span {
+  display: block;
+}
+
+.brand-block strong {
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.brand-block span {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 46%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.quick-entry {
+  display: grid;
+  width: auto;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  margin: 14px 12px 8px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: #e9f4f1;
+  background: rgb(255 255 255 / 7%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.quick-entry:hover:not(:disabled),
+.quick-entry.active {
+  border-color: rgb(241 201 74 / 44%);
+  background: rgb(255 255 255 / 13%);
+}
+
+.quick-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 9px;
+  color: #f1c94a;
+  background: rgb(241 201 74 / 14%);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.quick-entry strong,
+.quick-entry small {
+  display: block;
+}
+
+.quick-entry strong {
+  font-size: 0.86rem;
+}
+
+.quick-entry small {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 52%);
+  font-size: 0.7rem;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 18px 9px;
+}
+
+.sidebar-header h2 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+}
+
+.sidebar-kicker {
+  margin: 0;
+  color: rgb(255 255 255 / 40%);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.patient-count {
+  display: grid;
+  min-width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  color: #d8e8e4;
+  background: rgb(255 255 255 / 8%);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.patient-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 10px 12px;
+}
+
+.patient-item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 5px;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  border-radius: 9px;
+  padding: 9px 10px;
+  color: #e7f0ed;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: 150ms ease;
+}
+
+.patient-item:hover:not(:disabled) {
+  background: rgb(255 255 255 / 8%);
+}
+
+.patient-item.active {
+  border-color: rgb(255 255 255 / 7%);
+  border-left-color: #f1c94a;
+  background: rgb(255 255 255 / 13%);
+}
+
+.patient-item:disabled,
+.quick-entry:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.patient-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: #0f5148;
+  background: #dceee9;
+  font-weight: 800;
+}
+
+.patient-name,
+.patient-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patient-name {
+  margin-bottom: 3px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.patient-meta {
+  color: rgb(255 255 255 / 48%);
+  font-size: 0.68rem;
+}
+
+.sidebar-empty {
+  margin: 16px 12px;
+  color: rgb(255 255 255 / 48%);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.mode-toggle-small {
+  margin: 12px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 9px;
+  padding: 11px 12px;
+  color: #fff;
+  background: rgb(255 255 255 / 8%);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-toggle-small:hover:not(:disabled) {
+  background: rgb(255 255 255 / 14%);
+}
+
+.doctor-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  background: #fff;
+}
+
+.doctor-app-header {
+  padding: 14px 25px;
+  border-bottom: 1px solid #e2e8e5;
+  background: #fff;
+}
+
+.workflow-error {
+  padding: 10px 24px;
+  border-bottom: 1px solid #f6c7c4;
+  color: #9d2b25;
+  background: #fff2f1;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.patient-workspace,
+.quick-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.workspace-heading {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 25px;
+  border-bottom: 1px solid #e6ebe8;
+  background: #fff;
+}
+
+.workspace-heading.simple {
+  align-items: flex-start;
+}
+
+.workspace-kicker,
+.workflow-kicker {
+  margin: 0 0 4px;
+  color: #2a776d;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.workspace-heading h1,
+.workflow-title-row h2 {
+  margin: 0;
+  color: #123b35;
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  letter-spacing: -0.02em;
+}
+
+.workspace-heading p,
+.workflow-title-row p {
+  margin: 4px 0 0;
+  color: #6b7774;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.patient-heading-main {
+  display: flex;
+  min-width: 0;
+  gap: 12px;
+  align-items: center;
+}
+
+.workspace-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #175a52;
+  background: #e0f0ec;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.patient-title-line {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.patient-heading-main small {
+  display: block;
+  margin-top: 4px;
+  color: #84908d;
+  font-size: 0.73rem;
+}
+
+.approved-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #0b5b4f;
+  background: #dff2ed;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.consultation-controls {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.consultation-controls label {
+  color: #77827f;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.consultation-controls select,
+.consultation-controls button {
+  display: block;
+  margin-top: 4px;
+  border: 1px solid #cfd9d5;
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #26433e;
+  background: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.consultation-controls button {
+  color: #fff;
+  background: #175a52;
+  cursor: pointer;
+}
+
+.workflow-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+  padding: 10px 25px;
+  border-bottom: 1px solid #e4eae7;
+  background: #f6f9f8;
+}
+
+.workflow-tabs button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 13px;
+  color: #66736f;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.workflow-tabs button span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #66736f;
+  background: #e3e9e7;
+  font-size: 0.65rem;
+}
+
+.workflow-tabs button.active {
+  color: #fff;
+  background: #175a52;
+}
+
+.workflow-tabs button.active span {
+  color: #175a52;
+  background: #fff;
+}
+
+.workflow-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.36;
+}
+
+.workflow-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f7f9f8;
+}
+
+.charting-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  background: #fff;
+}
+
+.charting-footer {
+  flex: 0 0 auto;
+  border-top: 1px solid #e2e8e5;
+  background: #fafcfb;
+}
+
+.charting-action-row {
+  padding: 11px 16px 0;
+}
+
+.workflow-primary,
+.workflow-secondary {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 17px;
+  color: #fff;
+  background: #175a52;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.workflow-primary:hover:not(:disabled) {
+  background: #10473f;
+}
+
+.workflow-primary.small {
+  padding: 8px 13px;
+  font-size: 0.73rem;
+}
+
+.workflow-secondary {
+  border: 1px solid #a8d6cd;
+  color: #175a52;
+  background: #eff9f6;
+}
+
+.workflow-primary:disabled,
+.consultation-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.workflow-disclaimer {
+  margin: -3px 18px 10px;
+  color: #9aa4a1;
+  font-size: 0.68rem;
+}
+
+.workflow-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 26px clamp(20px, 4vw, 38px) 40px;
+}
+
+.workflow-title-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.review-warning {
+  margin-bottom: 22px;
+  border: 1px solid #efd68a;
+  border-radius: 9px;
+  padding: 11px 14px;
+  color: #745510;
+  background: #fff9e8;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.soap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.soap-grid label {
+  color: #28443f;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.soap-grid textarea {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  resize: vertical;
+  border: 1px solid #d3dcd9;
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: #253c38;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 450;
+  line-height: 1.55;
+  text-transform: none;
+}
+
+.soap-grid textarea:disabled {
+  color: #53625f;
+  background: #f1f4f3;
+}
+
+.decision-review-card {
+  margin-top: 18px;
+  border: 1px solid #edcf7b;
+  border-radius: 11px;
+  padding: 18px;
+  background: #fffdf5;
+}
+
+.decision-review-title {
+  margin: 0 0 13px;
+  color: #755611;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.document-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+  margin: 22px 0 17px;
+}
+
+.document-option {
+  display: grid;
+  grid-template-columns: auto 36px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  border: 1px solid #dfe7e4;
+  border-radius: 10px;
+  padding: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.document-option.selected {
+  border-color: #9acdc3;
+  background: #eff9f6;
+}
+
+.document-option input {
+  accent-color: #175a52;
+}
+
+.document-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  color: #175a52;
+  background: #dff1ed;
+  font-size: 0.63rem;
+  font-weight: 900;
+}
+
+.document-option strong,
+.document-option small {
+  display: block;
+}
+
+.document-option strong {
+  color: #213b36;
+  font-size: 0.82rem;
+}
+
+.document-option small {
+  margin-top: 3px;
+  color: #7b8884;
+  font-size: 0.69rem;
+}
+
+.generate-documents {
+  margin-bottom: 22px;
+}
+
+.document-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.document-result {
+  overflow: hidden;
+  border: 1px solid #dce5e2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.document-result.approved {
+  border-color: #9fd0c6;
+}
+
+.document-result-header {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  gap: 11px;
+  align-items: center;
+  border: 0;
+  padding: 12px 14px;
+  color: #263f3a;
+  background: #fbfcfc;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.document-result.approved .document-result-header {
+  background: #f1f9f7;
+}
+
+.document-chevron {
+  color: #899490;
+  font-size: 0.65rem;
+}
+
+.document-result-body {
+  border-top: 1px solid #e3e9e7;
+  padding: 18px;
+}
+
+.document-result-body pre {
+  overflow-wrap: anywhere;
+  margin: 0 0 16px;
+  color: #2e4540;
+  font-family: inherit;
+  font-size: 0.79rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.document-approved-copy {
+  margin: 0;
+  color: #176156;
+  font-size: 0.77rem;
+  font-weight: 800;
+}
+
+.no-patient-selected {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 28px;
+  background: #f6f9f8;
+}
+
+.selection-card {
+  max-width: 420px;
+  text-align: center;
+}
+
+.selection-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  color: #175a52;
+  background: #e0f0ec;
+  font-size: 1.7rem;
+}
+
+.selection-card h2 {
+  margin: 0 0 7px;
+  color: #163e37;
+}
+
+.selection-card p {
+  margin: 0;
+  color: #75817e;
+  line-height: 1.5;
+}
+
+.quick-workspace .chat-container {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    flex-basis: 240px;
+  }
+
+  .workspace-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .consultation-controls {
+    width: 100%;
+  }
+
+  .consultation-controls label {
+    flex: 1;
+  }
+
+  .consultation-controls select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .doctor-view {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    flex-direction: column;
+  }
+
+  .sidebar {
+    flex-basis: auto;
+    width: 100%;
+    max-height: 430px;
+  }
+
+  .patient-list {
+    max-height: 190px;
+  }
+
+  .doctor-main,
+  .patient-workspace,
+  .quick-workspace {
+    min-height: 720px;
+  }
+
+  .workflow-tabs {
+    overflow-x: auto;
+    padding: 9px 14px;
+  }
+
+  .soap-grid,
+  .document-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-title-row,
+  .approval-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .doctor-app-header,
+  .workspace-heading,
+  .workflow-panel {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .consultation-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .document-result-header {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .document-result-header .approved-badge {
+    display: none;
+  }
+}
