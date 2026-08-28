@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react'
 import DoctorView from './components/DoctorView'
 import ReceptionistView from './components/ReceptionistView'
-import DoctorLogin from './components/DoctorLogin'
+import AuthScreen from './components/AuthScreen'
+import AdminDashboard from './components/AdminDashboard'
 import type { Doctor } from './components/DoctorManagement'
+import {
+  clearSession,
+  clinicStateKey,
+  getClinic,
+  isEmailTaken,
+  loadSession,
+  saveSession,
+  type Clinic,
+  type Session,
+} from './auth'
 
 export interface Message {
   role: 'user' | 'assistant'
@@ -66,12 +77,10 @@ export interface PatientInput {
 
 export type WorkspaceTab = 'charting' | 'soap' | 'dispense'
 
-type AppMode = 'receptionist' | 'doctor'
 type Workspace = 'patient' | 'quick'
 type PendingAction = 'chat' | 'soap' | 'documents' | null
 
 interface AppState {
-  mode: AppMode
   workspace: Workspace
   doctors: Doctor[]
   patients: Patient[]
@@ -90,7 +99,6 @@ interface PatientContext {
   notes: string
 }
 
-const STORAGE_KEY = 'orthotic_app_state'
 
 const createId = (prefix: string) => {
   const uuid = globalThis.crypto?.randomUUID?.()
@@ -246,9 +254,8 @@ const normalisePatient = (value: unknown): Patient | null => {
   }
 }
 
-const loadState = (): AppState => {
+const loadState = (storageKey: string): AppState => {
   const fallback: AppState = {
-    mode: 'doctor',
     workspace: 'patient',
     doctors: [],
     patients: [],
@@ -257,7 +264,7 @@ const loadState = (): AppState => {
   }
 
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(storageKey)
     if (!saved) {
       return fallback
     }
@@ -287,7 +294,6 @@ const loadState = (): AppState => {
         : null
 
     return {
-      mode: parsed.mode === 'receptionist' ? 'receptionist' : 'doctor',
       workspace: parsed.workspace === 'quick' ? 'quick' : 'patient',
       doctors,
       patients,
@@ -336,15 +342,54 @@ const replacePatientPlaceholder = (content: string, displayName: string) =>
   content.split('[PATIENT LABEL]').join(displayName)
 
 function App() {
-  const [appState, setAppState] = useState<AppState>(loadState)
+  const [session, setSession] = useState<Session | null>(loadSession)
+
+  const handleLogin = (nextSession: Session) => {
+    saveSession(nextSession)
+    setSession(nextSession)
+  }
+
+  const handleLogout = () => {
+    clearSession()
+    setSession(null)
+  }
+
+  if (!session) {
+    return <AuthScreen onLogin={handleLogin} />
+  }
+
+  return (
+    <ClinicApp
+      key={`${session.clinicId}-${session.userId}`}
+      session={session}
+      onLogout={handleLogout}
+    />
+  )
+}
+
+interface ClinicAppProps {
+  session: Session
+  onLogout: () => void
+}
+
+function ClinicApp({ session, onLogout }: ClinicAppProps) {
+  const storageKey = clinicStateKey(session.clinicId)
+  const [appState, setAppState] = useState<AppState>(() => loadState(storageKey))
+  const [clinic, setClinic] = useState<Clinic | null>(() => getClinic(session.clinicId))
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('charting')
   const [errorMessage, setErrorMessage] = useState('')
-  const [currentLoggedInDoctor, setCurrentLoggedInDoctor] = useState<Doctor | null>(null)
 
-  const { mode, workspace, doctors, patients, selectedPatientId, quickMessages } = appState
+  const { workspace, doctors, patients, selectedPatientId, quickMessages } = appState
+  // A doctor can only ever open patients assigned to them, even if a
+  // different patient was left selected by a previous login.
   const currentPatient =
-    patients.find((patient) => patient.id === selectedPatientId) ?? null
+    patients.find(
+      (patient) =>
+        patient.id === selectedPatientId &&
+        (session.role !== 'doctor' ||
+          patient.assignedDoctorId === session.userId),
+    ) ?? null
   const currentConversation =
     currentPatient?.conversations.find(
       (conversation) => conversation.id === currentPatient.activeConversationId,
@@ -352,11 +397,11 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState))
+      localStorage.setItem(storageKey, JSON.stringify(appState))
     } catch (error) {
       console.error('Failed to save application state:', error)
     }
-  }, [appState])
+  }, [appState, storageKey])
 
   const updateConversation = (
     patientId: string,
@@ -694,25 +739,26 @@ function App() {
     setErrorMessage('')
   }
 
-  // Doctor login/logout handlers
-  const handleDoctorLogin = (doctor: Doctor) => {
-    setCurrentLoggedInDoctor(doctor)
-  }
-
-  const handleDoctorLogout = () => {
-    setCurrentLoggedInDoctor(null)
-  }
+  // The logged-in doctor comes from the session (email login on the auth screen).
+  const currentLoggedInDoctor =
+    session.role === 'doctor'
+      ? doctors.find((d) => d.id === session.userId) ?? null
+      : null
 
   // Filter patients for logged-in doctor
   const getVisiblePatients = () => {
     if (!currentLoggedInDoctor) {
-      return patients // shouldn't reach here, but fallback
+      return []
     }
     return patients.filter((p) => p.assignedDoctorId === currentLoggedInDoctor.id)
   }
 
   // Doctor handlers
   const handleAddDoctor = (doctor: Doctor) => {
+    if (isEmailTaken(doctor.email)) {
+      window.alert('This email is already in use. Please use a different email.')
+      return
+    }
     setAppState((current) => ({
       ...current,
       doctors: [...current.doctors, doctor],
@@ -739,31 +785,57 @@ function App() {
     }))
   }
 
-  if (mode === 'receptionist') {
+  if (session.role === 'admin') {
+    if (!clinic) {
+      onLogout()
+      return null
+    }
+    return (
+      <AdminDashboard
+        session={session}
+        clinic={clinic}
+        doctors={doctors}
+        patientCount={patients.length}
+        onAddDoctor={handleAddDoctor}
+        onDeleteDoctor={handleDeleteDoctor}
+        onClinicUpdated={setClinic}
+        onLogout={onLogout}
+      />
+    )
+  }
+
+  if (session.role === 'receptionist') {
     return (
       <ReceptionistView
+        clinicName={session.clinicName}
         doctors={doctors}
-        onAddDoctor={handleAddDoctor}
         onAssignPatient={handleAssignPatient}
         onCreatePatient={handleCreatePatient}
-        onDeleteDoctor={handleDeleteDoctor}
         onDeletePatient={handleDeletePatient}
-        onSwitchMode={() =>
-          setAppState((current) => ({ ...current, mode: 'doctor' }))
-        }
+        onLogout={onLogout}
         onUpdatePatient={handleUpdatePatient}
         patients={patients}
       />
     )
   }
 
-  // Show login screen if doctor mode but not logged in
+  // Doctor role: their account may have been removed by the clinic admin.
   if (!currentLoggedInDoctor) {
     return (
-      <DoctorLogin
-        doctors={doctors}
-        onLogin={handleDoctorLogin}
-      />
+      <div className="doctor-login-container">
+        <div className="doctor-login-card">
+          <div className="login-header">
+            <h1>Account not found</h1>
+            <p>
+              Your doctor account is no longer active in {session.clinicName}.
+              Please contact your clinic admin.
+            </p>
+          </div>
+          <button className="btn-login" onClick={onLogout} type="button">
+            Back to login
+          </button>
+        </div>
+      </div>
     )
   }
 
@@ -786,13 +858,9 @@ function App() {
       onSelectQuickQA={handleSelectQuickQA}
       onSend={handleSend}
       onSetActiveTab={setActiveTab}
-      onSwitchMode={() => {
-        setAppState((current) => ({ ...current, mode: 'receptionist' }))
-        setCurrentLoggedInDoctor(null) // logout when switching to receptionist
-      }}
       onUpdateSoap={handleUpdateSoap}
       currentDoctor={currentLoggedInDoctor}
-      onDoctorLogout={handleDoctorLogout}
+      onDoctorLogout={onLogout}
       patients={visiblePatients}
       pendingAction={pendingAction}
       quickMessages={quickMessages}

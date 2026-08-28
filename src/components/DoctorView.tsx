@@ -29,7 +29,6 @@ interface DoctorViewProps {
   currentDoctor: Doctor
   onSelectPatient: (id: string) => void
   onSelectQuickQA: () => void
-  onSwitchMode: () => void
   onSend: (content: string) => void
   onNewConsultation: () => void
   onSelectConversation: (id: string) => void
@@ -79,7 +78,6 @@ export default function DoctorView({
   currentDoctor,
   onSelectPatient,
   onSelectQuickQA,
-  onSwitchMode,
   onSend,
   onNewConsultation,
   onSelectConversation,
@@ -181,14 +179,6 @@ export default function DoctorView({
           )}
         </div>
 
-        <button
-          className="mode-toggle-small"
-          disabled={pending}
-          onClick={onSwitchMode}
-          type="button"
-        >
-          + Patient management
-        </button>
       </aside>
 
       <main className="doctor-main">

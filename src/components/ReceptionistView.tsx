@@ -1,20 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import type { Patient, PatientInput } from '../App'
 import type { Doctor } from './DoctorManagement'
-import DoctorManagement from './DoctorManagement'
 import PatientAssignment from './PatientAssignment'
 import './ReceptionistView.css'
 
 interface ReceptionistViewProps {
+  clinicName: string
   patients: Patient[]
   doctors: Doctor[]
   onCreatePatient: (input: PatientInput) => void
   onUpdatePatient: (id: string, input: PatientInput) => void
   onDeletePatient: (id: string) => void
-  onAddDoctor: (doctor: Doctor) => void
-  onDeleteDoctor: (doctorId: string) => void
   onAssignPatient: (patientId: string, doctorId: string) => void
-  onSwitchMode: () => void
+  onLogout: () => void
 }
 
 interface PatientFormData {
@@ -40,20 +38,19 @@ const EMPTY_FORM: PatientFormData = {
 }
 
 export default function ReceptionistView({
+  clinicName,
   patients,
   doctors,
   onCreatePatient,
   onUpdatePatient,
   onDeletePatient,
-  onAddDoctor,
-  onDeleteDoctor,
   onAssignPatient,
-  onSwitchMode,
+  onLogout,
 }: ReceptionistViewProps) {
   const [showModal, setShowModal] = useState(false)
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null)
   const [formData, setFormData] = useState<PatientFormData>(EMPTY_FORM)
-  const [activeTab, setActiveTab] = useState<'patients' | 'doctors' | 'assignments'>('patients')
+  const [activeTab, setActiveTab] = useState<'patients' | 'assignments'>('patients')
 
   const openCreateModal = () => {
     setEditingPatientId(null)
@@ -126,11 +123,11 @@ export default function ReceptionistView({
     <div className="receptionist-view">
       <header className="receptionist-header">
         <div>
-          <p className="view-kicker">Orthotic Prescription Assistant</p>
+          <p className="view-kicker">{clinicName} — Reception</p>
           <h1>Patient Management</h1>
         </div>
-        <button className="mode-toggle" onClick={onSwitchMode} type="button">
-          Switch to Practitioner Mode
+        <button className="mode-toggle" onClick={onLogout} type="button">
+          Logout
         </button>
       </header>
 
@@ -141,12 +138,6 @@ export default function ReceptionistView({
             onClick={() => setActiveTab('patients')}
           >
             👥 Patients
-          </button>
-          <button
-            className={`tab ${activeTab === 'doctors' ? 'active' : ''}`}
-            onClick={() => setActiveTab('doctors')}
-          >
-            👨‍⚕️ Doctors
           </button>
           <button
             className={`tab ${activeTab === 'assignments' ? 'active' : ''}`}
@@ -205,14 +196,6 @@ export default function ReceptionistView({
             </div>
           )}
         </section>
-        )}
-
-        {activeTab === 'doctors' && (
-          <DoctorManagement
-            doctors={doctors}
-            onAddDoctor={onAddDoctor}
-            onDeleteDoctor={onDeleteDoctor}
-          />
         )}
 
         {activeTab === 'assignments' && (
