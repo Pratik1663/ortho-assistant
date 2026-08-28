@@ -41,6 +41,80 @@ const DOCUMENT_OPTIONS: {
   },
 ]
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+// Opens the browser's print dialog with only the document text, so the
+// practitioner can choose "Save as PDF". A hidden iframe is used rather than
+// window.open so popup blockers don't interfere.
+function printDocument(label: string, content: string) {
+  const today = new Date().toISOString().slice(0, 10)
+  // The <title> becomes the default filename in the Save as PDF dialog.
+  const title = `${label} - ${today}`
+
+  const frame = window.document.createElement('iframe')
+  frame.setAttribute('aria-hidden', 'true')
+  frame.style.position = 'fixed'
+  frame.style.right = '0'
+  frame.style.bottom = '0'
+  frame.style.width = '0'
+  frame.style.height = '0'
+  frame.style.border = '0'
+  window.document.body.appendChild(frame)
+
+  const frameDocument = frame.contentWindow?.document
+  if (!frameDocument) {
+    window.document.body.removeChild(frame)
+    return
+  }
+
+  frameDocument.open()
+  frameDocument.write(
+    [
+      '<!DOCTYPE html>',
+      '<html><head><meta charset="utf-8">',
+      `<title>${escapeHtml(title)}</title>`,
+      '<style>',
+      '@page { margin: 20mm; }',
+      'body { margin: 0; }',
+      'pre {',
+      '  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;',
+      '  font-size: 11pt;',
+      '  line-height: 1.5;',
+      '  white-space: pre-wrap;',
+      '  word-wrap: break-word;',
+      '  margin: 0;',
+      '}',
+      '</style>',
+      '</head><body>',
+      `<pre>${escapeHtml(content)}</pre>`,
+      '</body></html>',
+    ].join('\n'),
+  )
+  frameDocument.close()
+
+  const frameWindow = frame.contentWindow
+  if (!frameWindow) {
+    window.document.body.removeChild(frame)
+    return
+  }
+
+  // Give the iframe a tick to lay out before printing, then clean up.
+  window.setTimeout(() => {
+    frameWindow.focus()
+    frameWindow.print()
+    window.setTimeout(() => {
+      if (frame.parentNode) {
+        frame.parentNode.removeChild(frame)
+      }
+    }, 1000)
+  }, 100)
+}
+
 export default function DispensingView({
   documents,
   pending,
@@ -144,7 +218,16 @@ export default function DispensingView({
                 <div className="document-result-body">
                   <pre>{document.content}</pre>
                   {document.approved ? (
-                    <p className="document-approved-copy">✓ Document finalized</p>
+                    <div className="document-actions">
+                      <p className="document-approved-copy">✓ Document finalized</p>
+                      <button
+                        className="workflow-primary small"
+                        onClick={() => printDocument(item.label, document.content)}
+                        type="button"
+                      >
+                        ⬇ Download PDF
+                      </button>
+                    </div>
                   ) : (
                     <button
                       className="workflow-primary small"
