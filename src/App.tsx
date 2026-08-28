@@ -135,6 +135,7 @@ interface PatientContext {
   notes: string
 }
 
+const GENERIC_ERROR = 'Something went wrong - try again'
 
 const createId = (prefix: string) => {
   const uuid = globalThis.crypto?.randomUUID?.()
@@ -460,6 +461,25 @@ const getPatientContext = (patient: Patient): PatientContext => ({
 const replacePatientPlaceholder = (content: string, displayName: string) =>
   content.split('[PATIENT LABEL]').join(displayName)
 
+// Drops a trailing assistant placeholder that never received any text,
+// so a failed request doesn't leave an empty bubble behind.
+const dropEmptyPlaceholder = (messages: Message[]): Message[] => {
+  const last = messages[messages.length - 1]
+  if (last && last.role === 'assistant' && last.content === '') {
+    return messages.slice(0, -1)
+  }
+  return messages
+}
+
+const replaceLastMessage = (messages: Message[], content: string): Message[] => {
+  if (messages.length === 0) {
+    return messages
+  }
+  const next = messages.slice()
+  next[next.length - 1] = { role: 'assistant', content }
+  return next
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(loadSession)
 
@@ -567,7 +587,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     messages: Message[],
     options: {
       patientContext?: PatientContext
-      action?: 'consultation' | 'soap' | 'document' | 'template'
+      action?: 'soap' | 'document' | 'template'
       documentType?: DocumentKey
       attachments?: OutgoingAttachment[]
       template?: string
@@ -582,15 +602,69 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     })
 
     if (!response.ok) {
-      throw new Error('Something went wrong — try again')
+      throw new Error(GENERIC_ERROR)
     }
 
     const data = (await response.json()) as { reply?: unknown }
     if (typeof data.reply !== 'string') {
-      throw new Error('Something went wrong — try again')
+      throw new Error(GENERIC_ERROR)
     }
 
     return data.reply
+  }
+
+  // Live chat is streamed so text appears as it is generated instead of
+  // arriving all at once after a long pause.
+  const streamChat = async (
+    messages: Message[],
+    options: {
+      patientContext?: PatientContext
+      attachments?: OutgoingAttachment[]
+    },
+    onText: (textSoFar: string) => void,
+  ) => {
+    const cleanMessages = messages.map(({ role, content }) => ({ role, content }))
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: cleanMessages,
+        action: 'consultation',
+        ...options,
+      }),
+    })
+
+    if (!response.ok || !response.body) {
+      throw new Error(GENERIC_ERROR)
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let textSoFar = ''
+
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+      const chunk = decoder.decode(value, { stream: true })
+      if (chunk.length > 0) {
+        textSoFar += chunk
+        onText(textSoFar)
+      }
+    }
+
+    const tail = decoder.decode()
+    if (tail.length > 0) {
+      textSoFar += tail
+      onText(textSoFar)
+    }
+
+    if (textSoFar.trim().length === 0) {
+      throw new Error(GENERIC_ERROR)
+    }
+
+    return textSoFar
   }
 
   const handleSend = async (
@@ -613,25 +687,33 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
           }
         : {}),
     }
+    const placeholder: Message = { role: 'assistant', content: '' }
     setErrorMessage('')
     setPendingAction('chat')
 
     if (workspace === 'quick') {
       const updatedMessages = [...quickMessages, userMessage]
-      setAppState((current) => ({ ...current, quickMessages: updatedMessages }))
+      setAppState((current) => ({
+        ...current,
+        quickMessages: [...updatedMessages, placeholder],
+      }))
       try {
-        const reply = await callApi(updatedMessages, {
-          attachments: attachments.length > 0 ? attachments : undefined,
-        })
+        await streamChat(
+          updatedMessages,
+          { attachments: attachments.length > 0 ? attachments : undefined },
+          (textSoFar) => {
+            setAppState((current) => ({
+              ...current,
+              quickMessages: replaceLastMessage(current.quickMessages, textSoFar),
+            }))
+          },
+        )
+      } catch {
+        setErrorMessage(GENERIC_ERROR)
         setAppState((current) => ({
           ...current,
-          quickMessages: [
-            ...current.quickMessages,
-            { role: 'assistant', content: reply },
-          ],
+          quickMessages: dropEmptyPlaceholder(current.quickMessages),
         }))
-      } catch {
-        setErrorMessage('Something went wrong — try again')
       } finally {
         setPendingAction(null)
       }
@@ -648,27 +730,83 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     const updatedMessages = [...currentConversation.messages, userMessage]
     updateConversation(patientId, conversationId, (conversation) => ({
       ...conversation,
-      messages: updatedMessages,
+      messages: [...updatedMessages, placeholder],
     }))
 
     try {
-      const reply = await callApi(updatedMessages, {
-        action: 'consultation',
-        patientContext: getPatientContext(currentPatient),
-        attachments: attachments.length > 0 ? attachments : undefined,
-      })
+      await streamChat(
+        updatedMessages,
+        {
+          patientContext: getPatientContext(currentPatient),
+          attachments: attachments.length > 0 ? attachments : undefined,
+        },
+        (textSoFar) => {
+          updateConversation(patientId, conversationId, (conversation) => ({
+            ...conversation,
+            messages: replaceLastMessage(conversation.messages, textSoFar),
+          }))
+        },
+      )
+    } catch {
+      setErrorMessage(GENERIC_ERROR)
       updateConversation(patientId, conversationId, (conversation) => ({
         ...conversation,
-        messages: [
-          ...conversation.messages,
-          { role: 'assistant', content: reply },
-        ],
+        messages: dropEmptyPlaceholder(conversation.messages),
       }))
-    } catch {
-      setErrorMessage('Something went wrong — try again')
     } finally {
       setPendingAction(null)
     }
+  }
+
+  // Wipes the visible thread. For a patient consultation this also clears
+  // the SOAP draft and documents, because they were derived from the
+  // messages being removed.
+  const handleClearConversation = () => {
+    if (pendingAction) {
+      return
+    }
+
+    setErrorMessage('')
+
+    if (workspace === 'quick') {
+      setAppState((current) => ({ ...current, quickMessages: [] }))
+      return
+    }
+
+    if (!currentPatient || !currentConversation) {
+      return
+    }
+
+    const patientId = currentPatient.id
+    const conversationId = currentConversation.id
+    const patientName = currentPatient.name
+
+    setAppState((current) => ({
+      ...current,
+      patients: current.patients.map((patient) =>
+        patient.id === patientId
+          ? {
+              ...patient,
+              conversations: patient.conversations.map((conversation) =>
+                conversation.id === conversationId
+                  ? {
+                      ...conversation,
+                      messages: [],
+                      soapNote: null,
+                      soapApproved: false,
+                      documents: {},
+                    }
+                  : conversation,
+              ),
+            }
+          : patient,
+      ),
+      activityLog: appendActivity(
+        current.activityLog,
+        `Cleared a consultation for patient "${patientName}"`,
+      ),
+    }))
+    setActiveTab('charting')
   }
 
   const handleGenerateSoap = async () => {
@@ -1147,6 +1285,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       isQuickQA={workspace === 'quick'}
       onApproveDocument={handleApproveDocument}
       onApproveSoap={handleApproveSoap}
+      onClearConversation={handleClearConversation}
       onGenerateDocuments={handleGenerateDocuments}
       onGenerateSoap={handleGenerateSoap}
       onNewConsultation={handleNewConsultation}

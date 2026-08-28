@@ -42,6 +42,7 @@ interface DoctorViewProps {
   onApproveSoap: () => void
   onGenerateDocuments: (keys: DocumentKey[]) => void
   onApproveDocument: (key: DocumentKey) => void
+  onClearConversation: () => void
   onDoctorLogout: () => void
   templates: DoctorTemplate[]
   onAddTemplate: (documentType: DocumentKey, name: string, content: string) => void
@@ -99,6 +100,7 @@ export default function DoctorView({
   onApproveSoap,
   onGenerateDocuments,
   onApproveDocument,
+  onClearConversation,
   onDoctorLogout,
   templates,
   onAddTemplate,
@@ -118,6 +120,15 @@ export default function DoctorView({
     : []
 
   const [showTemplates, setShowTemplates] = useState(false)
+
+  const confirmClear = (warnAboutSoap: boolean) => {
+    const message = warnAboutSoap
+      ? 'Clear this consultation? The messages, SOAP draft, and any generated documents will be removed. This cannot be undone.'
+      : 'Clear this Quick Q&A conversation? This cannot be undone.'
+    if (window.confirm(message)) {
+      onClearConversation()
+    }
+  }
 
   const templateNames: Partial<Record<DocumentKey, string>> = {}
   for (const template of [...templates].sort((a, b) =>
@@ -236,6 +247,16 @@ export default function DoctorView({
                 <h1>Quick Q&amp;A</h1>
                 <p>Ask LEOPA a general fabrication or workflow question without patient context.</p>
               </div>
+              {quickMessages.length > 0 && (
+                <button
+                  className="clear-conversation"
+                  disabled={pending}
+                  onClick={() => confirmClear(false)}
+                  type="button"
+                >
+                  Clear conversation
+                </button>
+              )}
             </div>
             <div className="chat-container">
               <MessageList messages={quickMessages} pending={pendingAction === 'chat'} />
@@ -286,6 +307,16 @@ export default function DoctorView({
                 <button disabled={pending} onClick={onNewConsultation} type="button">
                   + New consultation
                 </button>
+                {currentConversation.messages.length > 0 && (
+                  <button
+                    className="clear-conversation"
+                    disabled={pending}
+                    onClick={() => confirmClear(true)}
+                    type="button"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
 
