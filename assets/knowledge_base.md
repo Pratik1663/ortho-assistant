@@ -1,6 +1,6 @@
-# LEO Lab Modification Knowledge Base — Draft v8 (prescriber-audience reframe, remake stakes, form fields, 4 new packages)
+# LEO Lab Modification Knowledge Base — v9 (single source of truth: the form lives here)
 
-Structured from the LEO Lab Prescription Form (May 2023). Each entry covers: what it is, why it's prescribed, the biomechanics behind it, typical clinical triggers, fabrication notes, and cautions. Items marked **[LAB INPUT]** need Pratik's lab-specific detail.
+Structured from the LEO Lab Prescription Form (May 2023), which is transcribed option for option in **Section F**. Section F is the authoritative menu: if something is not there, LEO Lab does not build it and the AI does not name it. Sections 1, 2, 3 and 5 explain when to choose each option; Section F is the only place that says what the options are. Items marked **[LAB INPUT]** need Pratik's lab-specific detail and are never filled in by guesswork.
 
 Scope note for the AI: you are an experienced orthotic lab technician that prescribers can consult. The audience is any clinician who prescribes custom foot orthoses — pedorthists, chiropodists, podiatrists, physicians — who wants help thinking through a situation and translating it into a device build. The clinician owns the assessment and the final prescription; you own the fabrication knowledge: what each option does, when it's used, how options combine, and what the lab can build. You do not diagnose.
 
@@ -27,6 +27,235 @@ These principles get referenced throughout. The AI should reason from them when 
 **0.7 Force–tolerance tradeoff.** Control mods (rigid shell, high flange, deep skive) generate larger corrective forces but concentrate them on smaller skin/soft-tissue areas. Comfort and compliance fail before mechanics do. The practical rule: prescribe the least aggressive combination that reduces tissue stress enough, and cushion or accommodate wherever corrective forces concentrate (hence Navicular Sweet Spot accompanying medial flanges).
 
 **0.8 Sagittal vs frontal plane thinking.** Frontal-plane mods (posting, skives, flanges) control pronation/supination. Sagittal-plane mods (heel lifts, Morton's family, rockers, cutouts) manage forward progression and joint range. Many failed devices treat a sagittal-plane problem (blocked 1st MTP, tight calf) with frontal-plane tools. The AI should classify the presentation's dominant plane before suggesting.
+
+---
+
+
+## SECTION F — THE LEO LAB PRESCRIPTION FORM (complete menu, authoritative)
+
+This section is the form itself, transcribed option for option. It is the single
+source of truth for what LEO Lab builds. If a shell, material, topcover, addition,
+rigidity, length, cover, or field does not appear below, LEO Lab does not offer it
+and the AI does not name it — no matter how standard it is elsewhere in the
+orthotics world.
+
+Sections 1, 2, 3 and 5 explain *when* to choose each of these. This section is only
+*what exists*. When the two ever appear to disagree, this section wins.
+
+**How to read the value columns.** Every field below is one of three kinds:
+
+- **Side only** — the field is ticked Left, Right, or both. There is no size, depth
+  or thickness to give. Do not ask for one; there is nowhere to write it.
+- **Printed options** — the form lists the choices (1/16" or 1/8", Full/Medium/Low,
+  the rigidity labels, the heel cup depths). Naming these is correct, because they
+  are the form's own words. Offer the options and let the prescriber pick.
+- **Blank the prescriber fills** — degrees, millimetres, which mets. The form leaves
+  these empty on purpose. The AI never fills them in. It chooses the *kind* of
+  modification and asks for the value.
+
+---
+
+### F.1 — SHELL MODIFICATIONS
+
+All ten take **side only** — Left, Right, or both. No thickness, no size, no depth.
+
+- 1st Met Cut Out
+- 1st Ray Cut Out
+- 5th Met Cut Out
+- 5th Ray Cut Out
+- Medial Flange (shell)
+- Lateral Flange (shell)
+- Rigid Morton's Extension
+- Fascial Accommodation (as marked)
+- Navicular Sweet Spot (as marked)
+- Heel Hole
+
+Fascial Accommodation and Navicular Sweet Spot are **marked on the cast**, not
+specified as a number. If a prescriber asks how big to make one, the answer is that
+they mark it on the cast where the patient's anatomy needs it.
+
+---
+
+### F.2 — ADDITIONS
+
+Every addition on this section of the form is ticked per side — Left, Right, or
+both. Bilateral is a choice, not a default.
+
+| Addition | Options on the form | Side | Prescriber fills |
+|---|---|---|---|
+| Archfill | Soft / Firm | L / R | — |
+| Met Pads | Full / Medium / Low | L / R | Placement: 5mm Past Shell (default), or ___ mm Past Shell |
+| Met Bars | Full / Medium / Low | L / R | Placement shares the Met Pads line **[LAB INPUT — confirm]** |
+| Met Accommodation Pad | 1/16" or 1/8"; No Cutout, or cutouts at mets 1 2 3 4 5 | L / R | Which mets are cut out, per side |
+| Morton's Extension | 1/16" or 1/8" | L / R | — |
+| Reverse Morton's Extension | 1/16" or 1/8" | L / R | — |
+| Heel Cushion | 1/16" or 1/8" | L / R | — |
+| Heel Spur / Horseshoe Pad | — | L / R | — |
+| Kinetic Wedge | — | L / R | — |
+| Neuroma Pad | — | L / R | Between mets ___ and ___ |
+| Medial Flange (topcover) | — | L / R | — |
+| Lateral Flange (topcover) | — | L / R | — |
+| Arch Cookie / D-Pad | 1/16" or 1/8" | L / R | — |
+
+Two of these carry values the AI must get from the prescriber rather than assume:
+the **Neuroma Pad** needs which two mets it sits between, and the **Met
+Accommodation Pad** needs which mets are cut out. Met pad placement defaults to 5mm
+past the shell — that default may be stated, but any other distance is theirs.
+
+---
+
+### F.3 — ORTHOTIC WIDTH
+
+One choice: **Regular (default)** · **Wide** · **Narrow — ___ mm narrower than
+default**
+
+Regular is the default. Narrow is the only one of the three that takes a value, and
+that value is the prescriber's: ask how many millimetres narrower, never assume one.
+
+---
+
+### F.4 — TOPCOVER
+
+One topcover for the device. Use the exact name and thickness as written.
+
+**Vinyl** (no thickness given on the form): Black · Grey · Tan · Blue · Black
+Graphite · Silver Graphite · Flash Blue · Flash Orange
+
+**Foam** (each in both 1/16" and 1/8" unless noted): Black · Grey Swirl · Pink
+Swirl · Blue Swirl · Pink/Purple · Blue/Green · Camo (1/16" only) · Perforated
+Black (1/8" only) · Pink Diabetic · Black Diabetic
+
+**Fabric laminated / suede / leather:** X-Static Poron 1/8" (Premium) · Bamboo 1/8"
+· ETC Black 1/16" or 1/8" · ETC Blue 1/16" or 1/8" · Neoprene 1/16" or 1/8" · Suede
+1/16" · Leather (Premium)
+
+Nothing outside this list exists as a topcover at LEO Lab.
+
+**The Poron trap.** Poron appears twice on the form and means two different things.
+As a **topcover** it is only X-Static Poron 1/8" (Premium). As **cushioning** it is
+a material choice under Extra Cushioning (F.6), which is a separate layer on a
+separate line. "A Poron topcover" is ambiguous and gets built wrong — say which one
+is meant.
+
+---
+
+### F.5 — TOPCOVER LENGTH
+
+One choice: **Full Length** · **Sulcus** · **3/4**
+
+---
+
+### F.6 — EXTRA CUSHIONING
+
+A separate layer from the topcover, and a separate line on the form.
+
+| Placement | Material | Thickness | Side |
+|---|---|---|---|
+| Full Length | Puff or Poron | 1/16" or 1/8" | L / R |
+| Forefoot Only | Puff or Poron | 1/16" or 1/8" | L / R |
+
+When cushioning is wanted for a heavy patient or long standing hours, **this** is
+the field, not the topcover.
+
+---
+
+### F.7 — BOTTOM COVER
+
+One choice: **Vinyl** · **J-Suede** · **Cordura** · **Puff** · **Nyplex**
+
+---
+
+### F.8 — SKID PLATE
+
+Yes or no. No options, no sizes. **[LAB INPUT]** what the lab's skid plate is and
+when it is ordered.
+
+---
+
+### F.9 — ORTHOTIC RIGIDITY
+
+One choice from three families. Name the family and the level together — that is
+the box the prescriber ticks, so that is the language to use.
+
+| Family | Levels |
+|---|---|
+| **Poly** | Flexible · Semi-Flexible · Semi-Rigid · Rigid |
+| **3DP** | Flexible · Semi-Flexible · Semi-Rigid · Rigid |
+| **Premium** | 2.3mm XT-Carbon · 2.6mm XT-Carbon · 1.5mm TL2100 |
+
+Say "3DP Semi-Rigid" or "Poly Rigid." On the Premium shells the thickness is part
+of the product name, so quoting it is correct — but carbon is not offered in any
+other thickness.
+
+**Raw polymers are lab-side detail, not menu items.** The 3DP shells are printed in
+PA12 and the Poly shells are polypropylene, but neither is a box on the form and
+neither is ever presented as a choice. If a prescriber raises PA12 or polypropylene
+themselves, the AI can confirm it and discuss it — they know what they are asking
+about.
+
+---
+
+### F.10 — CAST DRESSING
+
+Call it cast dressing. Not "cast fill," not "cast correction."
+
+Four options on a single scale:
+
+**Tight to Arch → Minimum (3mm less than default) → Moderate (default) → Maximum
+(3mm more than default)**
+
+**Tight to Arch sits closest to the arch. Maximum sits farthest from it.** Dressing
+is material added over the cast, so more dressing puts the shell further off the
+foot's own shape. Less dressing means closer conformity and more arch contact; more
+dressing means less contact and a more forgiving device.
+
+Moderate is the default for a reason — it is the right opening position on most
+builds. Never state this scale backwards, and never state it both ways across one
+conversation. If unsure in the moment, name the option and let the prescriber judge.
+
+---
+
+### F.11 — HEEL CUP DEPTH
+
+Printed options: **9mm · 12mm · 14mm · 16mm · 18mm · 20mm**, or a custom value the
+prescriber writes in.
+
+These are the form's own numbers, so naming them is correct — but offer a range and
+let the prescriber pick rather than selecting a depth for them.
+
+---
+
+### F.12 — POSTING, SKIVES AND HEEL LIFTS
+
+Every value in this section is a blank the prescriber writes in. There are no
+printed options to choose from.
+
+| Field | Kind (AI chooses) | Value (prescriber writes) |
+|---|---|---|
+| Rearfoot posting | Intrinsic or Extrinsic; Varus or Valgus | Degrees, per side |
+| Forefoot posting | Intrinsic or Extrinsic; Varus or Valgus | Degrees, per side |
+| Heel skive | Medial or Lateral | Millimetres, per side |
+| Heel lift | — | Millimetres, per side |
+
+Posting is per side and asymmetric builds are normal. Never assume the same value
+both sides; if only one side is given, ask about the other.
+
+---
+
+### F.13 — FIELDS NOT YET TRANSCRIBED
+
+The following pages of the form have not been supplied and are therefore **not part
+of the menu yet**. The AI must not name options from them until they are filled in
+here.
+
+- Patient details
+- Device style — this is presumably where UCBL and Gait Plate (Section 7) are
+  ordered. **[LAB INPUT]**
+- Orthotic length
+- Additional Instructions — the free-text field. Several synonym-map entries in
+  Section 8 route custom requests here. **[LAB INPUT]** confirm what the lab accepts.
+- Whatever sits immediately above Orthotic Rigidity on the form (a partial line
+  about designing your own shell is visible at the top of that section).
 
 ---
 
@@ -289,19 +518,88 @@ These principles get referenced throughout. The AI should reason from them when 
 
 ---
 
-## SECTION 3 — RELATED PRESCRIPTION FIELDS (phase 2, brief)
-These interact with the modifications above and the AI needs them for complete recommendations:
-- **Heel Skive (Med/Lat, mm):** intrinsic wedging of the heel seat. A medial skive shifts the heel cup's reaction force medially under the calcaneus → supination moment at the STJ (Kirby); pairs with PTTD/pronation prescriptions. Lateral skive mirrors it for cavus/supination control.
-- **Heel Lift (mm):** raises the calcaneus → reduces Achilles/gastroc-soleus tension and ankle dorsiflexion demand; used for LLD, insertional Achilles pathology, equinus accommodation. Note it also slightly plantarflexes the foot, shifting load forefoot-ward (0.1) — relevant if metatarsalgia coexists.
-- **Posting (rearfoot/forefoot, intrinsic/extrinsic, varus/valgus, degrees):** the core frontal-plane torque tools (0.5); interact with flanges and skives — the AI should treat skive + flange + post as one additive "medial control budget," not three independent items.
-- **Heel Cup Depth (9–20mm+):** deeper cups increase calcaneal grip (frontal-plane control) and fat pad containment (cushioning); constrained by footwear depth.
-- **Orthotic Rigidity (Poly vs 3DP, Flexible→Rigid):** stiffness sets how much corrective force the geometry actually delivers vs deflects away; 3DP (MJF) rigidity behavior and lattice/thickness equivalences **[LAB INPUT]**.
-- **Extra Cushioning (Full length vs Forefoot only; Puff/Poron; 1/16"–1/8"):** full length for global cushioning needs (cavus, fat pad loss, hard-surface occupations); forefoot-only when the need is metatarsal-region cushioning without adding heel stack height. Remember every layer costs shoe volume.
-- **Cast Dressing (Tight to Arch / Moderate (default) / Min −3mm / Max +3mm):** this is the arch-congruency dial. Tight-to-arch fills the cast closer to the true arch contour → more aggressive, more support, less forgiveness; minimum dressing behaves similarly by removing plaster allowance. Maximum dressing (+3mm) lowers effective arch contact → gentler, more tolerant, less control. Practical use: tight for control prescriptions in tolerant feet (0.7 caution applies), maximum for sensitive arches, first-time wearers, fascial tenderness. This interacts directly with archfill and arch cookie choices — treat arch aggressiveness as one dial across all three.
-- **Orthotic Width (Regular / Wide / Narrow −mm):** wide for broad feet, control builds needing full shell contact, and heavier patients; narrow (specify mm) to fit low-volume footwear — accept that narrowing trims the shell's lever arms and containment slightly. If a prescription pairs "narrow" with high control demands, flag the tension.
-- **Topcover Length (Full / Sulcus / 3/4):** full length for most builds and whenever forefoot additions (met pads, extensions, cushioning) need a carrier over them; sulcus (ends just behind the toes) keeps toe box volume while still carrying forefoot additions; 3/4 (ends behind the met heads) maximizes shoe versatility and forefoot room but CANNOT carry met-head-level or toe-level additions — flag any prescription combining 3/4 length with forefoot extensions/pads that need distal coverage.
-- **Bottom Cover (Vinyl / J-Suede / Cordura / Puff / Nyplex):** interface between device and shoe bed — durability, grip (device migration in the shoe), and slight cushioning differences. **[LAB INPUT]** when the lab steers each.
-- **Skid Plate:** **[LAB INPUT]** exactly what the lab's skid plate is and when it's ordered (wear protection at high-abrasion zones? specific sports?). The AI should not guess on this one until defined.
+## SECTION 3 — CHOOSING THE DEVICE-LEVEL FIELDS (rigidity, dressing, cup, posting, covers)
+
+Sections 1 and 2 cover the modifications that get added to a device. This section
+covers the fields that define the device itself — the ones on every prescription,
+whether or not a single addition is ordered. The options live in Section F; what
+follows is how to choose between them.
+
+**Orthotic Rigidity (F.9).** Rigidity sets how much of the geometry's corrective
+force actually reaches the foot rather than deflecting away. A flexible shell under
+a heavy or strongly pronating foot gives up most of the correction the posting and
+skive were meant to deliver; a rigid shell under a fragile or rigid foot delivers
+force the tissue can't tolerate (0.7). Match rigidity to the control budget set in
+Step 3 of Section 4, then check it against patient weight, activity, tissue
+tolerance and whether this is a first device. Poly and 3DP are offered at the same
+four levels; the Premium shells are the low-profile rigid answer when footwear
+volume is the binding constraint. **[LAB INPUT]** how 3DP rigidity behaves against
+Poly at the same label (fatigue, spring-back, lattice/thickness equivalences), and
+when the lab steers XT-Carbon versus TL2100.
+
+**Cast Dressing (F.10).** This is the arch-congruency dial, and it belongs in the
+same mental budget as archfill and the arch cookie — treat arch aggressiveness as
+one setting across all three rather than three independent choices. Toward the
+tight end you get closer conformity, more arch contact and more support, with less
+forgiveness; toward Maximum you get less contact, a gentler device and more
+tolerance. Moderate is the default and the right opening position on most builds.
+Reach toward tight for control prescriptions in feet that will tolerate them; reach
+toward Maximum for sensitive arches, first-time wearers and fascial tenderness.
+Read the scale direction off F.10 every time — this is the field most often stated
+backwards.
+
+**Heel Cup Depth (F.11).** Two jobs at once: deeper cups grip the calcaneus
+(frontal-plane control) and contain the fat pad (cushioning). Both argue for depth
+on pronation control builds and on fat pad atrophy. The constraint is footwear —
+depth consumes shoe volume, and a deep cup stacked with a heel cushion will ride a
+heel out of a shallow shoe (6.2). Offer a range from F.11 and let the prescriber
+choose against the shoe in front of them.
+
+**Posting, skives and heel lifts (F.12).** These are the core frontal-plane torque
+tools (0.5), and skive, post and flange should be treated as one additive medial
+(or lateral) control budget rather than three independent items. A medial skive
+shifts the heel cup's reaction force medially under the calcaneus, producing a
+supination moment at the STJ; it pairs naturally with PTTD and pronation
+prescriptions, and adds control without more post angle. Lateral skive mirrors it
+for cavus and supination control. Heel lifts raise the calcaneus, reducing
+gastroc-soleus tension and ankle dorsiflexion demand — used for LLD, insertional
+Achilles pathology and equinus accommodation — and they also plantarflex the foot
+slightly, shifting load forefoot-ward (0.1), which matters when metatarsalgia
+coexists. The AI decides rearfoot versus forefoot, intrinsic versus extrinsic,
+varus versus valgus, medial versus lateral, and whether a lift is warranted at all.
+Every degree and millimetre comes from the prescriber's exam.
+
+**Orthotic Width (F.3).** Regular covers most builds. Wide suits broad feet, heavier
+patients, and control prescriptions that need the shell in full contact with the
+foot — a shell that doesn't reach the edges gives up leverage it was meant to have.
+Narrow exists to fit low-volume footwear, and the cost is real: narrowing trims the
+shell's lever arms and its containment. **If a prescription pairs narrow with a high
+control demand, flag the tension** — the shoe is quietly taking away what the posting
+and flanges are trying to add. Usually the honest conversation is about the footwear,
+not the device.
+
+**Topcover (F.4) and Topcover Length (F.5).** Length is where footwear category
+matters most. Full length suits most builds and is required whenever forefoot
+additions need a carrier over them. Sulcus ends just behind the toes, preserving toe
+box volume while still carrying forefoot additions. 3/4 ends behind the met heads,
+maximising shoe versatility and forefoot room — but it **cannot carry met-head-level
+or toe-level additions**, so flag any prescription pairing 3/4 with forefoot
+extensions or pads that need distal coverage (6.2). On material, steer by the
+interface problem: durability and wipe-clean, friction and moisture, or feel.
+**[LAB INPUT]** when the lab steers each family.
+
+**Extra Cushioning (F.6).** Full length for global cushioning needs — cavus, fat
+pad loss, hard-surface occupations, long standing hours. Forefoot only when the
+need is metatarsal-region cushioning without adding heel stack height. Remember
+every layer costs shoe volume. This is a different line from the topcover; say
+which one is meant.
+
+**Bottom Cover (F.7).** The interface between device and shoe bed: durability, grip
+(a device that migrates in the shoe is a complaint waiting to happen), and slight
+differences in cushioning. **[LAB INPUT]** when the lab steers each.
+
+**Skid Plate (F.8).** **[LAB INPUT]** what it is and when it is ordered. The AI
+should not guess on this one until it is defined.
 
 ---
 
@@ -359,7 +657,7 @@ What structure is overloaded, and is the problem *tension* (fascia, tendons), *c
 
 **Step 2 — Decide the device philosophy: functional, accommodative, or hybrid.**
 - Functional: semi-rigid to rigid shell, control features, minimal padding. For mechanical problems in feet that can tolerate correction.
-- Accommodative: flexible shell or EVA, total contact, cushioning, apertures. For rigid deformities, fragile tissue, high-risk feet (diabetic, rheumatoid), fat pad loss.
+- Accommodative: the flexible end of the rigidity menu (F.9), total contact, cushioning, apertures. For rigid deformities, fragile tissue, high-risk feet (diabetic, rheumatoid), fat pad loss.
 - Hybrid (most real prescriptions): a functional base with targeted accommodations. The Leo Lab form is built for this — shell + rigidity choices set the base, additions layer the accommodation.
 Rule of thumb: correct the flexible, accommodate the rigid. If a deformity doesn't reduce on exam, don't fight it with the device — make room for it.
 
@@ -392,7 +690,7 @@ Common packages for clinician-identified presentations. These are starting point
 
 **5.2 Plantar heel pain — fat pad atrophy (diffuse, "walking on bone")**
 - Base: deeper heel cup (contains and centralizes remaining fat pad), semi-flexible to semi-rigid shell
-- Cushioning: heel cushion 1/8", cushioned topcover (Poron/PPT family), extra cushioning full length for global loss
+- Cushioning: heel cushion 1/8", a cushioned topcover from F.4, extra cushioning full length (F.6) for global loss
 - Focal defect: heel hole with soft plug
 - Avoid: aggressive rigid heel seat with no interface
 
@@ -442,7 +740,7 @@ Common packages for clinician-identified presentations. These are starting point
 - Control only as needed: lateral flange/valgus post if instability coexists
 
 **5.11 High-risk foot (clinician-identified diabetic/neuropathic, protective prescription)**
-- Base: accommodative philosophy, Plastazote-type total-contact interface
+- Base: accommodative philosophy, total-contact fit, and a diabetic topcover from F.4 (Pink or Black Diabetic, 1/16" or 1/8")
 - Offload named sites: met accommodation pad with cutouts, heel hole with soft plug where indicated
 - Avoid: aggressive corrective features that concentrate force on insensate skin
 - Everything soft-edged: bevels, no abrupt pad margins **[LAB INPUT]** house finishing standards for diabetic builds
@@ -574,7 +872,7 @@ The AI should resolve these silently and confirm the mapped item back to the use
 | Deep dish | Deep heel cup (16mm+) | Confirm mm |
 | Flange / clip / wall | Medial or Lateral Flange (shell vs topcover) | Clarify side + level |
 | Sulcus length | Topcover Length: Sulcus | Ends behind toes |
-| Poron / PPT (used as generic) | Cushioning materials | Map to lab's stocked equivalent **[LAB INPUT]** |
+| Poron / PPT (used as generic) | Ask which line they mean: X-Static Poron 1/8" (Premium) as a **topcover** (F.4), or Poron as **extra cushioning** (F.6) | Different lines on the form; confirm before building |
 | Whitman / Roberts plate / deep-seated | UCBL (7.1) | Historical deep-seated designs; modern equivalent is UCBL |
 | Gait plate / torsion plate | Gait Plate (7.2) | Confirm in-toe vs out-toe inducing |
 
@@ -582,30 +880,155 @@ The AI should resolve these silently and confirm the mapped item back to the use
 
 ---
 
-## SECTION 9 — MATERIALS QUICK REFERENCE (skeleton — Pratik to fill)
+## SECTION 9 — MATERIALS QUICK REFERENCE (form materials only — lab detail to fill)
 
-| Material | Where used on the menu | Firmness/durometer | Best for | Compression/service life | Notes |
+Every material named here appears on the LEO Lab prescription form. Nothing else is
+stocked, and nothing else may be named. Blank cells and **[LAB INPUT]** marks are
+gaps in the lab's own reference, not invitations to estimate — the AI names the
+material and says the lab will confirm the specification.
+
+**Shells**
+
+| Material | Where it appears | Firmness | Best for | Service life | Notes |
 |---|---|---|---|---|---|
-| Poly Pro shell | Standard shell material | Per rigidity selection + thickness | Functional base | — | Thickness/flex grind rules **[LAB INPUT]** |
-| 3DP nylon (MJF PA11/PA12) | 3DP rigidity column | Flexible / semi-flexible / semi-rigid / rigid | Functional base, complex geometry | — | How lattice/thickness maps to the four rigidity labels; behavior vs poly (fatigue, spring-back) **[LAB INPUT]** |
-| XT-Carbon 2.3/2.6mm, TL2100 1.5mm | Premium shells | — | Low-profile rigid (dress, sport) | — | **[LAB INPUT]** selection guidance |
-| 35 DUR EVA | Accommodative shell option | 35 durometer | Accommodative builds | — | Dual/tri density on request **[LAB INPUT]** rules |
-| Plastazote | High-risk/diabetic topcover | — | Insensate/high-risk interface | Bottoms out fastest — refurb interval **[LAB INPUT]** | Total-contact molding behavior |
-| Poron/PPT-class foam | Cushions, plugs, extra cushioning | — | Shock, plugs, apertures fill | **[LAB INPUT]** | Which brand/spec stocked **[LAB INPUT]** |
-| Vinyl topcovers | Standard | — | Durability, wipe-clean | — | — |
-| ETC / X-Static / suede / leather / neoprene | Topcover menu | — | Friction/moisture/feel preferences | — | When to steer which **[LAB INPUT]** |
-| Cork/heel lift material | Heel lifts, extrinsic posts | — | — | — | **[LAB INPUT]** what the lab posts/lifts with |
+| Poly shell | Orthotic Rigidity — Poly (F.9) | Flexible / Semi-Flexible / Semi-Rigid / Rigid | Functional base across the full range | **[LAB INPUT]** | Thickness and flex-grind rules **[LAB INPUT]** |
+| 3DP shell | Orthotic Rigidity — 3DP (F.9) | Flexible / Semi-Flexible / Semi-Rigid / Rigid | Functional base, complex geometry | **[LAB INPUT]** | How the printed lattice maps to the four labels, and how it behaves against Poly at the same label **[LAB INPUT]** |
+| XT-Carbon 2.3mm / 2.6mm | Orthotic Rigidity — Premium (F.9) | Rigid, low profile | Rigid control where shoe volume is the constraint (dress, sport) | **[LAB INPUT]** | Selection guidance between the two thicknesses **[LAB INPUT]** |
+| TL2100 1.5mm | Orthotic Rigidity — Premium (F.9) | Rigid, thinnest profile | The lowest-volume rigid option | **[LAB INPUT]** | When the lab steers TL2100 over XT-Carbon **[LAB INPUT]** |
+
+**Topcovers** (F.4)
+
+| Material | Thicknesses offered | Steers toward | Service life | Notes |
+|---|---|---|---|---|
+| Vinyl (8 colours) | — | Durability, wipe-clean | **[LAB INPUT]** | **[LAB INPUT]** |
+| Foam (Black, Grey Swirl, Pink Swirl, Blue Swirl, Pink/Purple, Blue/Green) | 1/16" and 1/8" | General-purpose cushioned interface | **[LAB INPUT]** | **[LAB INPUT]** |
+| Camo | 1/16" only | — | **[LAB INPUT]** | **[LAB INPUT]** |
+| Perforated Black | 1/8" only | Breathability | **[LAB INPUT]** | **[LAB INPUT]** |
+| Pink Diabetic / Black Diabetic | 1/16" and 1/8" | High-risk and insensate feet | **[LAB INPUT]** — bottoming out drives the refurb interval | Total-contact behaviour **[LAB INPUT]** |
+| X-Static Poron 1/8" (Premium) | 1/8" | Shock plus antimicrobial/moisture | **[LAB INPUT]** | The only Poron **topcover**; Poron as cushioning is F.6 |
+| Bamboo 1/8" | 1/8" | Moisture, natural fibre feel | **[LAB INPUT]** | **[LAB INPUT]** |
+| ETC Black / ETC Blue | 1/16" and 1/8" | Cushioned feel, friction management | **[LAB INPUT]** | **[LAB INPUT]** |
+| Neoprene | 1/16" and 1/8" | More give than ETC | **[LAB INPUT]** | **[LAB INPUT]** |
+| Suede 1/16" | 1/16" | Low-profile, dress footwear | **[LAB INPUT]** | **[LAB INPUT]** |
+| Leather (Premium) | — | Dress footwear, durability | **[LAB INPUT]** | **[LAB INPUT]** |
+
+**Cushioning and covers**
+
+| Material | Where it appears | Steers toward | Service life | Notes |
+|---|---|---|---|---|
+| Puff | Extra Cushioning (F.6), Bottom Cover (F.7) | Soft cushioning layer | **[LAB INPUT]** | **[LAB INPUT]** firmness vs Poron |
+| Poron | Extra Cushioning (F.6) | Shock absorption under load | **[LAB INPUT]** | Cushioning line, not the topcover line |
+| J-Suede | Bottom Cover (F.7) | Grip in the shoe | **[LAB INPUT]** | **[LAB INPUT]** |
+| Cordura | Bottom Cover (F.7) | Durability | **[LAB INPUT]** | **[LAB INPUT]** |
+| Nyplex | Bottom Cover (F.7) | **[LAB INPUT]** | **[LAB INPUT]** | **[LAB INPUT]** |
+| Vinyl | Bottom Cover (F.7) | Low friction, easy shoe entry | **[LAB INPUT]** | **[LAB INPUT]** |
+
+**[LAB INPUT]** — what the lab builds posts, extrinsic wedges and heel lifts from.
+Not a field on the form, so the AI does not name a material for these; it names the
+post and asks for the angle.
+
+**[LAB INPUT]** — durometers, compression set and refurb intervals across the
+table. Until these are filled, the AI answers "how long before this needs
+refurbishing" with the honest answer: the lab confirms service life per material,
+and it depends on the patient's weight, hours and surface.
 
 ---
 
 ## SECTION 10 — FOOTWEAR-CATEGORY GUIDANCE (skeleton — Pratik to fill)
 
-What changes per footwear category. The AI checks this before finalizing any build.
+What changes per footwear category. The AI checks this before finalising any build,
+and the fields it flexes are always the same four: shell rigidity and profile (F.9),
+topcover length (F.5), heel cup depth (F.11), and total stack — topcover plus extra
+cushioning (F.4, F.6).
 
-**Runners/trainers:** most permissive — depth for cups and stacks, removable sockliner space. Full menu generally available.
-**Dress/slim:** the restricted menu — low-profile thin shells, no shell flanges (topcover flange substitute), shallow cups, 3/4 or sulcus lengths, minimal stack. **[LAB INPUT]** hard limits list.
-**Work boots (safety):** deep and stable, good for control builds; heel pitch of the boot interacts with heel lifts; heavier patients + all-day standing raise the control budget and the cushioning need. **[LAB INPUT]** house guidance.
-**Hockey skates:** recurring Ontario ask. Extremely low volume, snug fit, no room for stack; thin rigid low-profile builds; forefoot mods nearly impossible; lateral/medial feel matters for edge control. **[LAB INPUT]** what the lab actually builds for skates (style, shell, topcover, what gets refused).
-**Cleats (soccer/etc.):** thin, narrow, low volume — slim builds, minimal additions; stud pressure can transmit through thin plates **[LAB INPUT]** guidance.
-**Sandals/other:** **[LAB INPUT]** whether the lab builds for sandal systems at all.
+**Runners / trainers.** The most permissive category: depth for cups and stacks, a
+removable sockliner to free up volume. The full menu is generally available.
 
+**Dress / slim.** The restricted menu. Low-profile shells — this is the Premium
+column's natural home (F.9). No shell flanges; substitute the topcover flange
+(F.2). Shallow cups from the low end of F.11. Sulcus or 3/4 topcover length, with
+3/4's forefoot limitation in mind (6.2). Thin topcovers — Suede 1/16" or a 1/16"
+foam — and minimal or no extra cushioning, because every millimetre counts under a
+thin insole. The working principle: control comes from shell geometry, posting and
+skives, not from pads. **[LAB INPUT]** the hard limits list — what the lab refuses
+or substitutes outright in this category.
+
+**Work boots (safety).** Deep and stable, which makes them good for control builds.
+The boot's own heel pitch interacts with any heel lift, and a deep cup plus lifts
+can foul the boot collar — worth checking before it ships. Heavier patients and
+all-day standing raise both the control budget and the cushioning need, so this is
+where full-length extra cushioning (F.6) earns its place. **[LAB INPUT]** house
+guidance.
+
+**Hockey skates.** A recurring Ontario ask. Extremely low volume and a snug fit, so
+there is no room for stack: thin, rigid, low-profile builds only. Forefoot
+modifications are close to impossible. Medial and lateral feel matters more here
+than anywhere else because it drives edge control. **[LAB INPUT]** what the lab
+actually builds for skates — shell, rigidity, topcover, and what gets refused.
+
+**Cleats (soccer and similar).** Thin, narrow, low volume. Slim builds with minimal
+additions. Stud pressure can transmit through a thin plate. **[LAB INPUT]**
+guidance.
+
+**Sandals and open footwear.** **[LAB INPUT]** whether the lab builds for sandal
+systems at all.
+
+---
+
+## SECTION 11 — POST-DISPENSE: WHAT CAN BE ADJUSTED, WHAT NEEDS A REMAKE
+
+This section exists because of 6.0: remakes are full cost, every time. The most
+valuable answer LEOPA can give is often "you don't need a new device for that."
+
+When a prescriber describes a device that isn't working, the first question is not
+which modification to add — it is **which of these three buckets the fix lives in**:
+
+**1. Chairside — the clinic can do it today.** No return to the lab, no cost, no
+downtime for the patient. Generally the topcover-level and additive changes: pads
+that need repositioning, an added cushion layer, edge relief, a break-in schedule
+rather than any physical change at all. **[LAB INPUT]** the definitive list of what
+the lab expects clinics to handle chairside, and what it would rather see returned.
+
+**2. Return to lab for adjustment — the device comes back, the shell survives.**
+Cheaper and faster than a remake, and the patient keeps the device they are used to.
+Typically post angle changes, adding or replacing covers and cushioning, adding
+additions that don't require a different shell geometry. **[LAB INPUT]** what the lab
+adjusts on a returned device, what it charges, and the turnaround.
+
+**3. Remake — the shell itself is wrong.** Shell geometry, rigidity family, cast
+dressing, heel cup depth, width, and the shell modifications in F.1 are all baked in
+at fabrication. Changing any of them means a new device at full cost. **[LAB INPUT]**
+confirm this list, and confirm whether any of it is salvageable.
+
+**How this changes the advice.** Under uncertainty, prefer the reversible path: soft
+before rigid Morton's, medium before full met pad, moderate before maximum control,
+a cover change before a shell change. And when a prescriber is weighing two options,
+say plainly which one is a remake if it turns out wrong. That is the single most
+useful thing a lab can tell a clinic, and it is the whole reason this assistant
+exists.
+
+**[LAB INPUT]** — expected service life before refurbishment, by material and by
+patient load. Until this is filled, LEOPA answers "how long before this needs
+refurbishing" honestly: the lab confirms it, and it depends on weight, hours and
+surface.
+
+---
+
+## SECTION 12 — GETTING THE ORDER TO THE LAB
+
+**[LAB INPUT]** — this entire section. LEOPA currently cannot answer basic logistics
+questions a prescriber will absolutely ask, and it must not guess at any of them:
+
+- Casting and scanning: what the lab accepts (plaster, foam box, 3D scan), which
+  scanners and file formats, and whether the choice changes what can be built.
+- What must be marked on the cast or scan: Fascial Accommodation and Navicular Sweet
+  Spot are "as marked" on the form (F.1), so the marking is part of the order.
+- Turnaround time, standard and rush.
+- How an order is submitted, and what a prescriber does when a form field doesn't
+  cover what they want.
+- Warranty and remake policy in the lab's own words.
+
+Until this is filled, the correct response to a logistics question is that the lab
+confirms it directly — not an estimate.
+
+---
