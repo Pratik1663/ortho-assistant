@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import type {
+  DoctorTemplate,
   DocumentKey,
   Message,
+  OutgoingAttachment,
   Patient,
   PatientConversation,
   SoapNote,
@@ -11,10 +14,11 @@ import Composer from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
 import MessageList from './MessageList'
+import TemplateManager from './TemplateManager'
 import SoapReview from './SoapReview'
 import './DoctorView.css'
 
-type PendingAction = 'chat' | 'soap' | 'documents' | null
+type PendingAction = 'chat' | 'soap' | 'documents' | 'template' | null
 
 interface DoctorViewProps {
   patients: Patient[]
@@ -29,7 +33,7 @@ interface DoctorViewProps {
   currentDoctor: Doctor
   onSelectPatient: (id: string) => void
   onSelectQuickQA: () => void
-  onSend: (content: string) => void
+  onSend: (content: string, attachments: OutgoingAttachment[]) => void
   onNewConsultation: () => void
   onSelectConversation: (id: string) => void
   onSetActiveTab: (tab: WorkspaceTab) => void
@@ -39,6 +43,14 @@ interface DoctorViewProps {
   onGenerateDocuments: (keys: DocumentKey[]) => void
   onApproveDocument: (key: DocumentKey) => void
   onDoctorLogout: () => void
+  templates: DoctorTemplate[]
+  onAddTemplate: (documentType: DocumentKey, name: string, content: string) => void
+  onDeleteTemplate: (id: string) => void
+  onExtractTemplate: (
+    documentType: DocumentKey,
+    name: string,
+    attachment: OutgoingAttachment,
+  ) => void
 }
 
 const calculateAge = (dob: string) => {
@@ -88,6 +100,10 @@ export default function DoctorView({
   onGenerateDocuments,
   onApproveDocument,
   onDoctorLogout,
+  templates,
+  onAddTemplate,
+  onDeleteTemplate,
+  onExtractTemplate,
 }: DoctorViewProps) {
   const pending = pendingAction !== null
   const sortedPatients = [...patients].sort((a, b) => a.name.localeCompare(b.name))
@@ -100,6 +116,15 @@ export default function DoctorView({
         currentPatient.footwearType,
       ].filter(Boolean)
     : []
+
+  const [showTemplates, setShowTemplates] = useState(false)
+
+  const templateNames: Partial<Record<DocumentKey, string>> = {}
+  for (const template of [...templates].sort((a, b) =>
+    a.createdAt.localeCompare(b.createdAt),
+  )) {
+    templateNames[template.documentType] = template.name
+  }
 
   return (
     <div className="doctor-view">
@@ -139,6 +164,19 @@ export default function DoctorView({
           <span>
             <strong>Quick Q&amp;A</strong>
             <small>General lab questions</small>
+          </span>
+        </button>
+
+        <button
+          className="quick-entry"
+          disabled={pending}
+          onClick={() => setShowTemplates(true)}
+          type="button"
+        >
+          <span className="quick-icon" aria-hidden="true">📄</span>
+          <span>
+            <strong>My Templates</strong>
+            <small>{templates.length} saved</small>
           </span>
         </button>
 
@@ -344,12 +382,24 @@ export default function DoctorView({
                   onApprove={onApproveDocument}
                   onGenerate={onGenerateDocuments}
                   pending={pendingAction === 'documents'}
+                  templateNames={templateNames}
                 />
               )}
             </div>
           </div>
         )}
       </main>
+
+      {showTemplates && (
+        <TemplateManager
+          onAdd={onAddTemplate}
+          onClose={() => setShowTemplates(false)}
+          onDelete={onDeleteTemplate}
+          onExtractPdf={onExtractTemplate}
+          pending={pendingAction === 'template'}
+          templates={templates}
+        />
+      )}
     </div>
   )
 }

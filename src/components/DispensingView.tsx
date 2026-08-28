@@ -6,6 +6,7 @@ interface DispensingViewProps {
   pending: boolean
   onGenerate: (keys: DocumentKey[]) => void
   onApprove: (key: DocumentKey) => void
+  templateNames?: Partial<Record<DocumentKey, string>>
 }
 
 const DOCUMENT_OPTIONS: {
@@ -45,6 +46,7 @@ export default function DispensingView({
   pending,
   onGenerate,
   onApprove,
+  templateNames = {},
 }: DispensingViewProps) {
   const [selected, setSelected] = useState<Record<DocumentKey, boolean>>({
     diagnosis: true,
@@ -95,6 +97,11 @@ export default function DispensingView({
             <span>
               <strong>{item.label}</strong>
               <small>{item.description}</small>
+              {templateNames[item.key] && (
+                <small className="template-indicator">
+                  📄 Uses your template: {templateNames[item.key]}
+                </small>
+              )}
             </span>
           </label>
         ))}

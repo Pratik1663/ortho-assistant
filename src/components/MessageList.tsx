@@ -22,7 +22,21 @@ function MessageList({ messages, pending }: MessageListProps) {
       )}
       {messages.map((message, index) => (
         <div className={`message-row ${message.role}`} key={index}>
-          <div className="message-bubble">{message.content}</div>
+          <div className="message-bubble">
+            {Array.isArray(message.attachments) && message.attachments.length > 0 && (
+              <div className="message-attachments">
+                {message.attachments.map((attachment, i) => (
+                  <span className="attachment-chip static" key={`${attachment.name}-${i}`}>
+                    <span aria-hidden="true">
+                      {attachment.mediaType === 'application/pdf' ? '📄' : '🖼️'}
+                    </span>
+                    {attachment.name}
+                  </span>
+                ))}
+              </div>
+            )}
+            {message.content}
+          </div>
         </div>
       ))}
       {pending && (

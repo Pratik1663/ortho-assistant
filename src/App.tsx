@@ -15,9 +15,19 @@ import {
   type Session,
 } from './auth'
 
+export interface AttachmentMeta {
+  name: string
+  mediaType: string
+}
+
+export interface OutgoingAttachment extends AttachmentMeta {
+  data: string
+}
+
 export interface Message {
   role: 'user' | 'assistant'
   content: string
+  attachments?: AttachmentMeta[]
 }
 
 export interface SoapNote {
@@ -38,6 +48,15 @@ export type DocumentKey =
 export interface ClinicalDocument {
   content: string
   approved: boolean
+}
+
+export interface DoctorTemplate {
+  id: string
+  doctorId: string
+  documentType: DocumentKey
+  name: string
+  content: string
+  createdAt: string
 }
 
 export interface PatientConversation {
@@ -93,7 +112,7 @@ export interface PatientInput {
 export type WorkspaceTab = 'charting' | 'soap' | 'dispense'
 
 type Workspace = 'patient' | 'quick'
-type PendingAction = 'chat' | 'soap' | 'documents' | null
+type PendingAction = 'chat' | 'soap' | 'documents' | 'template' | null
 
 interface AppState {
   workspace: Workspace
@@ -102,6 +121,7 @@ interface AppState {
   selectedPatientId: string | null
   quickMessages: Message[]
   activityLog: ActivityEntry[]
+  templates: DoctorTemplate[]
 }
 
 interface PatientContext {
@@ -256,6 +276,36 @@ const normaliseActivityEntry = (value: unknown): ActivityEntry | null => {
   }
 }
 
+const DOCUMENT_KEYS: DocumentKey[] = ['diagnosis', 'prescription', 'summary', 'insurance']
+
+const normaliseTemplate = (value: unknown): DoctorTemplate | null => {
+  if (typeof value !== 'object' || value === null) {
+    return null
+  }
+  const template = value as Record<string, unknown>
+  if (
+    typeof template.id !== 'string' ||
+    typeof template.doctorId !== 'string' ||
+    typeof template.name !== 'string' ||
+    typeof template.content !== 'string' ||
+    typeof template.documentType !== 'string' ||
+    !DOCUMENT_KEYS.includes(template.documentType as DocumentKey)
+  ) {
+    return null
+  }
+  return {
+    id: template.id,
+    doctorId: template.doctorId,
+    documentType: template.documentType as DocumentKey,
+    name: template.name,
+    content: template.content,
+    createdAt:
+      typeof template.createdAt === 'string'
+        ? template.createdAt
+        : new Date().toISOString(),
+  }
+}
+
 const normalisePatient = (value: unknown): Patient | null => {
   if (typeof value !== 'object' || value === null) {
     return null
@@ -317,6 +367,7 @@ const loadState = (storageKey: string): AppState => {
     selectedPatientId: null,
     quickMessages: [],
     activityLog: [],
+    templates: [],
   }
 
   try {
@@ -361,6 +412,12 @@ const loadState = (storageKey: string): AppState => {
         ? parsed.activityLog.flatMap((item) => {
             const entry = normaliseActivityEntry(item)
             return entry ? [entry] : []
+          })
+        : [],
+      templates: Array.isArray(parsed.templates)
+        ? parsed.templates.flatMap((item) => {
+            const template = normaliseTemplate(item)
+            return template ? [template] : []
           })
         : [],
     }
@@ -442,8 +499,15 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('charting')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const { workspace, doctors, patients, selectedPatientId, quickMessages, activityLog } =
-    appState
+  const {
+    workspace,
+    doctors,
+    patients,
+    selectedPatientId,
+    quickMessages,
+    activityLog,
+    templates,
+  } = appState
 
   const createActivityEntry = (action: string): ActivityEntry => ({
     id: createId('activity'),
@@ -503,14 +567,18 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     messages: Message[],
     options: {
       patientContext?: PatientContext
-      action?: 'consultation' | 'soap' | 'document'
+      action?: 'consultation' | 'soap' | 'document' | 'template'
       documentType?: DocumentKey
+      attachments?: OutgoingAttachment[]
+      template?: string
     } = {},
   ) => {
+    // Only role + content go to the API; attachment metadata stays local.
+    const cleanMessages = messages.map(({ role, content }) => ({ role, content }))
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, ...options }),
+      body: JSON.stringify({ messages: cleanMessages, ...options }),
     })
 
     if (!response.ok) {
@@ -525,12 +593,26 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     return data.reply
   }
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (
+    content: string,
+    attachments: OutgoingAttachment[] = [],
+  ) => {
     if (pendingAction || content.trim().length === 0) {
       return
     }
 
-    const userMessage: Message = { role: 'user', content: content.trim() }
+    const userMessage: Message = {
+      role: 'user',
+      content: content.trim(),
+      ...(attachments.length > 0
+        ? {
+            attachments: attachments.map(({ name, mediaType }) => ({
+              name,
+              mediaType,
+            })),
+          }
+        : {}),
+    }
     setErrorMessage('')
     setPendingAction('chat')
 
@@ -538,7 +620,9 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       const updatedMessages = [...quickMessages, userMessage]
       setAppState((current) => ({ ...current, quickMessages: updatedMessages }))
       try {
-        const reply = await callApi(updatedMessages)
+        const reply = await callApi(updatedMessages, {
+          attachments: attachments.length > 0 ? attachments : undefined,
+        })
         setAppState((current) => ({
           ...current,
           quickMessages: [
@@ -571,6 +655,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       const reply = await callApi(updatedMessages, {
         action: 'consultation',
         patientContext: getPatientContext(currentPatient),
+        attachments: attachments.length > 0 ? attachments : undefined,
       })
       updateConversation(patientId, conversationId, (conversation) => ({
         ...conversation,
@@ -648,6 +733,85 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     setActiveTab('dispense')
   }
 
+  const doctorTemplates =
+    session.role === 'doctor'
+      ? templates.filter((template) => template.doctorId === session.userId)
+      : []
+
+  const templateForType = (key: DocumentKey): DoctorTemplate | null => {
+    const matching = doctorTemplates
+      .filter((template) => template.documentType === key)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return matching[0] ?? null
+  }
+
+  const handleAddTemplate = (
+    documentType: DocumentKey,
+    name: string,
+    content: string,
+  ) => {
+    const template: DoctorTemplate = {
+      id: createId('template'),
+      doctorId: session.userId,
+      documentType,
+      name: name.trim() || 'Untitled template',
+      content,
+      createdAt: new Date().toISOString(),
+    }
+    setAppState((current) => ({
+      ...current,
+      templates: [...current.templates, template],
+      activityLog: appendActivity(
+        current.activityLog,
+        `Added document template "${template.name}"`,
+      ),
+    }))
+  }
+
+  const handleDeleteTemplate = (id: string) => {
+    setAppState((current) => {
+      const target = current.templates.find((template) => template.id === id)
+      return {
+        ...current,
+        templates: current.templates.filter((template) => template.id !== id),
+        activityLog: appendActivity(
+          current.activityLog,
+          `Deleted document template "${target?.name ?? 'Unknown'}"`,
+        ),
+      }
+    })
+  }
+
+  const handleExtractTemplate = async (
+    documentType: DocumentKey,
+    name: string,
+    attachment: OutgoingAttachment,
+  ) => {
+    if (pendingAction) {
+      return
+    }
+    setPendingAction('template')
+    try {
+      const reply = await callApi(
+        [
+          {
+            role: 'user',
+            content:
+              'Transcribe the attached blank form into a reusable plain-text template.',
+          },
+        ],
+        { action: 'template', attachments: [attachment] },
+      )
+      handleAddTemplate(documentType, name, reply)
+    } catch {
+      window.alert(
+        'The PDF could not be read into a template. Please try again, or paste the template text instead.',
+      )
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
   const handleGenerateDocuments = async (keys: DocumentKey[]) => {
     if (
       pendingAction ||
@@ -673,16 +837,20 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
 
     try {
       const generated = await Promise.all(
-        keys.map(async (key) => ({
-          key,
-          content: replacePatientPlaceholder(
-            await callApi([sourceMessage], {
-              action: 'document',
-              documentType: key,
-            }),
-            currentPatient.name,
-          ),
-        })),
+        keys.map(async (key) => {
+          const template = templateForType(key)
+          return {
+            key,
+            content: replacePatientPlaceholder(
+              await callApi([sourceMessage], {
+                action: 'document',
+                documentType: key,
+                template: template ? template.content : undefined,
+              }),
+              currentPatient.name,
+            ),
+          }
+        }),
       )
 
       updateConversation(patientId, conversationId, (conversation) => {
@@ -990,6 +1158,10 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       onUpdateSoap={handleUpdateSoap}
       currentDoctor={currentLoggedInDoctor}
       onDoctorLogout={onLogout}
+      templates={doctorTemplates}
+      onAddTemplate={handleAddTemplate}
+      onDeleteTemplate={handleDeleteTemplate}
+      onExtractTemplate={handleExtractTemplate}
       patients={visiblePatients}
       pendingAction={pendingAction}
       quickMessages={quickMessages}

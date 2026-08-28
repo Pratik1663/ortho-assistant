@@ -7,7 +7,7 @@ type ChatMessage = {
   content: string
 }
 
-type ChatAction = 'consultation' | 'soap' | 'document'
+type ChatAction = 'consultation' | 'soap' | 'document' | 'template'
 type DocumentType = 'diagnosis' | 'prescription' | 'summary' | 'insurance'
 
 type PatientContext = {
@@ -21,11 +21,19 @@ type PatientContext = {
   notes: string
 }
 
+type Attachment = {
+  name: string
+  mediaType: 'image/jpeg' | 'image/png' | 'application/pdf'
+  data: string
+}
+
 type ParsedBody = {
   messages: ChatMessage[]
   patientContext?: PatientContext
   action: ChatAction
   documentType?: DocumentType
+  attachments?: Attachment[]
+  template?: string
 }
 
 type ChatRequest = {
@@ -123,6 +131,51 @@ function parsePatientContext(value: unknown): PatientContext | null | undefined 
   }
 }
 
+const MAX_ATTACHMENTS = 3
+// ~4.5MB total base64 keeps us under the serverless request body limit.
+const MAX_TOTAL_ATTACHMENT_CHARS = 4_500_000
+
+function parseAttachments(value: unknown): Attachment[] | null | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ATTACHMENTS) {
+    return null
+  }
+  let totalChars = 0
+  const attachments: Attachment[] = []
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null) {
+      return null
+    }
+    const attachment = item as Record<string, unknown>
+    const allowed = new Set(['name', 'mediaType', 'data'])
+    if (!Object.keys(attachment).every((key) => allowed.has(key))) {
+      return null
+    }
+    const { name, mediaType, data } = attachment
+    if (
+      typeof name !== 'string' ||
+      name.length === 0 ||
+      name.length > 300 ||
+      typeof data !== 'string' ||
+      data.length === 0 ||
+      !/^[A-Za-z0-9+/=]+$/.test(data) ||
+      (mediaType !== 'image/jpeg' &&
+        mediaType !== 'image/png' &&
+        mediaType !== 'application/pdf')
+    ) {
+      return null
+    }
+    totalChars += data.length
+    if (totalChars > MAX_TOTAL_ATTACHMENT_CHARS) {
+      return null
+    }
+    attachments.push({ name, mediaType, data })
+  }
+  return attachments
+}
+
 function parseBody(body: unknown): ParsedBody | null {
   if (typeof body !== 'object' || body === null) {
     return null
@@ -134,6 +187,8 @@ function parseBody(body: unknown): ParsedBody | null {
     'patientContext',
     'action',
     'documentType',
+    'attachments',
+    'template',
   ])
   if (
     !Object.keys(requestBody).every((key) => allowedKeys.has(key)) ||
@@ -146,13 +201,43 @@ function parseBody(body: unknown): ParsedBody | null {
   }
 
   const action = requestBody.action ?? 'consultation'
-  if (action !== 'consultation' && action !== 'soap' && action !== 'document') {
+  if (
+    action !== 'consultation' &&
+    action !== 'soap' &&
+    action !== 'document' &&
+    action !== 'template'
+  ) {
     return null
   }
 
   const patientContext = parsePatientContext(requestBody.patientContext)
   if (patientContext === null) {
     return null
+  }
+
+  const attachments = parseAttachments(requestBody.attachments)
+  if (attachments === null) {
+    return null
+  }
+  // Attachments apply to live chat turns and template transcription.
+  if (attachments && action !== 'consultation' && action !== 'template') {
+    return null
+  }
+  // Template transcription requires exactly one attached file.
+  if (action === 'template' && (!attachments || attachments.length !== 1)) {
+    return null
+  }
+
+  const template = requestBody.template
+  if (template !== undefined) {
+    if (
+      action !== 'document' ||
+      typeof template !== 'string' ||
+      template.length === 0 ||
+      template.length > 20_000
+    ) {
+      return null
+    }
   }
 
   const documentType = requestBody.documentType
@@ -174,7 +259,54 @@ function parseBody(body: unknown): ParsedBody | null {
     patientContext,
     action,
     documentType: documentType as DocumentType | undefined,
+    attachments,
+    template: template as string | undefined,
   }
+}
+
+type ContentBlock =
+  | { type: 'text'; text: string }
+  | {
+      type: 'image'
+      source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png'; data: string }
+    }
+  | {
+      type: 'document'
+      source: { type: 'base64'; media_type: 'application/pdf'; data: string }
+    }
+
+function buildApiMessages(
+  messages: ChatMessage[],
+  attachments?: Attachment[],
+): (ChatMessage | { role: 'user'; content: ContentBlock[] })[] {
+  if (!attachments || attachments.length === 0) {
+    return messages
+  }
+  const last = messages[messages.length - 1]
+  if (!last || last.role !== 'user') {
+    return messages
+  }
+  const blocks: ContentBlock[] = attachments.map((attachment) =>
+    attachment.mediaType === 'application/pdf'
+      ? {
+          type: 'document' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: 'application/pdf' as const,
+            data: attachment.data,
+          },
+        }
+      : {
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: attachment.mediaType,
+            data: attachment.data,
+          },
+        },
+  )
+  blocks.push({ type: 'text', text: last.content })
+  return [...messages.slice(0, -1), { role: 'user', content: blocks }]
 }
 
 function addPatientContext(system: string, context?: PatientContext) {
@@ -208,7 +340,21 @@ function addWorkflowInstructions(
   system: string,
   action: ChatAction,
   documentType?: DocumentType,
+  template?: string,
 ) {
+  if (action === 'template') {
+    return [
+      system,
+      '',
+      'WORKFLOW MODE: TEMPLATE TRANSCRIPTION',
+      'The practitioner has attached one of their own blank forms.',
+      'Transcribe it into a reusable plain-text template:',
+      '- Keep every heading, label, field name, and their order exactly as they appear.',
+      '- Replace every blank line, empty box, or fill-in area with a bracketed placeholder describing what belongs there, e.g. [PATIENT NAME], [DATE], [DIAGNOSIS], [DEVICE SPECIFICATIONS].',
+      '- Do not add, remove, or reword any of the form content.',
+      'Return only the transcribed template as plain text. No preamble, no commentary, no markdown fences.',
+    ].join('\n')
+  }
   if (action === 'soap') {
     return [
       system,
@@ -223,7 +369,7 @@ function addWorkflowInstructions(
   }
 
   if (action === 'document' && documentType) {
-    return [
+    const base = [
       system,
       '',
       'WORKFLOW MODE: DOCUMENT DRAFT',
@@ -231,7 +377,22 @@ function addWorkflowInstructions(
       'Do not add clinical facts, diagnoses, prescriptions, codes, or coverage statements that are not present in the supplied data.',
       'Use [PATIENT LABEL] for the patient name. Include [CLINIC NAME], [PRACTITIONER NAME], [REGISTRATION NUMBER], [DATE], and [SIGNATURE] where appropriate.',
       'Return plain text only with clear section headings.',
-    ].join('\n')
+    ]
+    if (template) {
+      base.push(
+        '',
+        "PRACTITIONER'S OWN TEMPLATE",
+        'The practitioner has provided their own template below. Fill it in instead of using a generic format:',
+        '- Keep the template structure, wording, section order, and labels exactly as written.',
+        '- Insert data only into the bracketed placeholders and blank areas.',
+        '- Where the supplied data has no value for a placeholder, leave it as [BLANK].',
+        '- Still use [PATIENT LABEL] wherever the patient name belongs.',
+        '--- TEMPLATE START ---',
+        template,
+        '--- TEMPLATE END ---',
+      )
+    }
+    return base.join('\n')
   }
 
   return system
@@ -273,14 +434,21 @@ export default async function handler(
       addPatientContext(baseSystem, parsed.patientContext),
       parsed.action,
       parsed.documentType,
+      parsed.template,
     )
 
     const anthropic = new Anthropic({ apiKey })
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: parsed.action === 'document' ? 2200 : 1500,
+      max_tokens:
+        parsed.action === 'document' || parsed.action === 'template'
+          ? 2200
+          : 1500,
       system,
-      messages: parsed.messages,
+      messages: buildApiMessages(
+        parsed.messages,
+        parsed.attachments,
+      ) as Anthropic.MessageParam[],
     })
 
     const reply = response.content

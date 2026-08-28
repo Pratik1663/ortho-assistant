@@ -382,3 +382,141 @@ textarea:focus-visible {
   text-align: center;
   line-height: 1.4;
 }
+
+
+/* Composer tools: attach + dictate */
+.composer-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.composer-tool-btn {
+  border: 1px solid #d5dce6;
+  background: #ffffff;
+  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  font-size: 1.05rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.composer-tool-btn:hover:not(:disabled) {
+  background: #f0f4f9;
+}
+
+.composer-tool-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mic-btn.recording {
+  background: #fdecec;
+  border-color: #e05b5b;
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 91, 91, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(224, 91, 91, 0); }
+}
+
+/* Attachment chips */
+.attachment-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2f7;
+  border: 1px solid #d5dce6;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  color: #1a2b4a;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-chip.static {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.attachment-remove {
+  border: none;
+  background: transparent;
+  color: #5b6b83;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.attachment-remove:hover {
+  color: #c0392b;
+}
+
+
+/* Template manager */
+.template-modal {
+  max-width: 640px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.template-intro {
+  color: #5b6b83;
+  font-size: 0.9rem;
+  margin: 4px 0 16px;
+}
+
+.template-add-form {
+  background: #f5f7fa;
+  border: 1px solid #e3e8ef;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.template-add-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-primary.secondary {
+  background: #ffffff;
+  color: #1a2b4a;
+  border: 1px solid #d5dce6;
+}
+
+.template-indicator {
+  display: block;
+  margin-top: 4px;
+  color: #1f7a5c;
+  font-weight: 600;
+}
