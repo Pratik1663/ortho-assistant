@@ -49,6 +49,20 @@ export interface PatientConversation {
   documents: Partial<Record<DocumentKey, ClinicalDocument>>
 }
 
+export interface AssignmentInfo {
+  byName: string
+  byRole: string
+  at: string
+}
+
+export interface ActivityEntry {
+  id: string
+  at: string
+  actorName: string
+  actorRole: string
+  action: string
+}
+
 export interface Patient {
   id: string
   name: string
@@ -60,6 +74,7 @@ export interface Patient {
   activityLevel: string
   notes: string
   assignedDoctorId: string | null
+  assignedBy: AssignmentInfo | null
   activeConversationId: string
   conversations: PatientConversation[]
 }
@@ -86,6 +101,7 @@ interface AppState {
   patients: Patient[]
   selectedPatientId: string | null
   quickMessages: Message[]
+  activityLog: ActivityEntry[]
 }
 
 interface PatientContext {
@@ -202,6 +218,44 @@ const normaliseConversation = (value: unknown): PatientConversation | null => {
   }
 }
 
+const normaliseAssignmentInfo = (value: unknown): AssignmentInfo | null => {
+  if (typeof value !== 'object' || value === null) {
+    return null
+  }
+  const info = value as Record<string, unknown>
+  if (
+    typeof info.byName !== 'string' ||
+    typeof info.byRole !== 'string' ||
+    typeof info.at !== 'string'
+  ) {
+    return null
+  }
+  return { byName: info.byName, byRole: info.byRole, at: info.at }
+}
+
+const normaliseActivityEntry = (value: unknown): ActivityEntry | null => {
+  if (typeof value !== 'object' || value === null) {
+    return null
+  }
+  const entry = value as Record<string, unknown>
+  if (
+    typeof entry.id !== 'string' ||
+    typeof entry.at !== 'string' ||
+    typeof entry.actorName !== 'string' ||
+    typeof entry.actorRole !== 'string' ||
+    typeof entry.action !== 'string'
+  ) {
+    return null
+  }
+  return {
+    id: entry.id,
+    at: entry.at,
+    actorName: entry.actorName,
+    actorRole: entry.actorRole,
+    action: entry.action,
+  }
+}
+
 const normalisePatient = (value: unknown): Patient | null => {
   if (typeof value !== 'object' || value === null) {
     return null
@@ -249,6 +303,7 @@ const normalisePatient = (value: unknown): Patient | null => {
     notes: typeof patient.notes === 'string' ? patient.notes : '',
     assignedDoctorId:
       typeof patient.assignedDoctorId === 'string' ? patient.assignedDoctorId : null,
+    assignedBy: normaliseAssignmentInfo(patient.assignedBy),
     activeConversationId,
     conversations: safeConversations,
   }
@@ -261,6 +316,7 @@ const loadState = (storageKey: string): AppState => {
     patients: [],
     selectedPatientId: null,
     quickMessages: [],
+    activityLog: [],
   }
 
   try {
@@ -300,6 +356,12 @@ const loadState = (storageKey: string): AppState => {
       selectedPatientId,
       quickMessages: Array.isArray(parsed.quickMessages)
         ? parsed.quickMessages.filter(isMessage)
+        : [],
+      activityLog: Array.isArray(parsed.activityLog)
+        ? parsed.activityLog.flatMap((item) => {
+            const entry = normaliseActivityEntry(item)
+            return entry ? [entry] : []
+          })
         : [],
     }
   } catch (error) {
@@ -380,7 +442,19 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('charting')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const { workspace, doctors, patients, selectedPatientId, quickMessages } = appState
+  const { workspace, doctors, patients, selectedPatientId, quickMessages, activityLog } =
+    appState
+
+  const createActivityEntry = (action: string): ActivityEntry => ({
+    id: createId('activity'),
+    at: new Date().toISOString(),
+    actorName: session.name,
+    actorRole: session.role,
+    action,
+  })
+
+  const appendActivity = (log: ActivityEntry[], action: string): ActivityEntry[] =>
+    [createActivityEntry(action), ...log].slice(0, 300)
   // A doctor can only ever open patients assigned to them, even if a
   // different patient was left selected by a previous login.
   const currentPatient =
@@ -648,6 +722,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       ...input,
       name: input.name.trim(),
       assignedDoctorId: null,
+      assignedBy: null,
       activeConversationId: conversation.id,
       conversations: [conversation],
     }
@@ -657,6 +732,10 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       workspace: 'patient',
       patients: [...current.patients, newPatient],
       selectedPatientId: newPatient.id,
+      activityLog: appendActivity(
+        current.activityLog,
+        `Created patient "${newPatient.name}"`,
+      ),
     }))
     setActiveTab('charting')
   }
@@ -669,16 +748,27 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
           ? { ...patient, ...input, name: input.name.trim() }
           : patient,
       ),
+      activityLog: appendActivity(
+        current.activityLog,
+        `Updated patient "${input.name.trim()}"`,
+      ),
     }))
   }
 
   const handleDeletePatient = (id: string) => {
-    setAppState((current) => ({
-      ...current,
-      patients: current.patients.filter((patient) => patient.id !== id),
-      selectedPatientId:
-        current.selectedPatientId === id ? null : current.selectedPatientId,
-    }))
+    setAppState((current) => {
+      const target = current.patients.find((patient) => patient.id === id)
+      return {
+        ...current,
+        patients: current.patients.filter((patient) => patient.id !== id),
+        selectedPatientId:
+          current.selectedPatientId === id ? null : current.selectedPatientId,
+        activityLog: appendActivity(
+          current.activityLog,
+          `Deleted patient "${target?.name ?? 'Unknown'}"`,
+        ),
+      }
+    })
   }
 
   const handleSelectPatient = (id: string) => {
@@ -762,27 +852,59 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     setAppState((current) => ({
       ...current,
       doctors: [...current.doctors, doctor],
+      activityLog: appendActivity(
+        current.activityLog,
+        `Added doctor ${doctor.name} (${doctor.email})`,
+      ),
     }))
   }
 
   const handleDeleteDoctor = (doctorId: string) => {
-    setAppState((current) => ({
-      ...current,
-      doctors: current.doctors.filter((d) => d.id !== doctorId),
-      // Unassign all patients from this doctor
-      patients: current.patients.map((p) =>
-        p.assignedDoctorId === doctorId ? { ...p, assignedDoctorId: null } : p,
-      ),
-    }))
+    setAppState((current) => {
+      const target = current.doctors.find((d) => d.id === doctorId)
+      return {
+        ...current,
+        doctors: current.doctors.filter((d) => d.id !== doctorId),
+        // Unassign all patients from this doctor
+        patients: current.patients.map((p) =>
+          p.assignedDoctorId === doctorId
+            ? { ...p, assignedDoctorId: null, assignedBy: null }
+            : p,
+        ),
+        activityLog: appendActivity(
+          current.activityLog,
+          `Removed doctor ${target?.name ?? 'Unknown'}`,
+        ),
+      }
+    })
   }
 
   const handleAssignPatient = (patientId: string, doctorId: string | '') => {
-    setAppState((current) => ({
-      ...current,
-      patients: current.patients.map((p) =>
-        p.id === patientId ? { ...p, assignedDoctorId: doctorId || null } : p,
-      ),
-    }))
+    setAppState((current) => {
+      const patient = current.patients.find((p) => p.id === patientId)
+      const doctor = current.doctors.find((d) => d.id === doctorId)
+      const assignedBy: AssignmentInfo | null = doctorId
+        ? {
+            byName: session.name,
+            byRole: session.role,
+            at: new Date().toISOString(),
+          }
+        : null
+      return {
+        ...current,
+        patients: current.patients.map((p) =>
+          p.id === patientId
+            ? { ...p, assignedDoctorId: doctorId || null, assignedBy }
+            : p,
+        ),
+        activityLog: appendActivity(
+          current.activityLog,
+          doctorId
+            ? `Assigned patient "${patient?.name ?? 'Unknown'}" to ${doctor?.name ?? 'Unknown'}`
+            : `Unassigned patient "${patient?.name ?? 'Unknown'}"`,
+        ),
+      }
+    })
   }
 
   if (session.role === 'admin') {
@@ -795,10 +917,17 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
         session={session}
         clinic={clinic}
         doctors={doctors}
-        patientCount={patients.length}
+        patients={patients}
+        activityLog={activityLog}
         onAddDoctor={handleAddDoctor}
         onDeleteDoctor={handleDeleteDoctor}
         onClinicUpdated={setClinic}
+        onLogActivity={(action) =>
+          setAppState((current) => ({
+            ...current,
+            activityLog: appendActivity(current.activityLog, action),
+          }))
+        }
         onLogout={onLogout}
       />
     )

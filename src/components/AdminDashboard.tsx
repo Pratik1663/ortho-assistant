@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import DoctorManagement, { type Doctor } from './DoctorManagement'
+import type { ActivityEntry, Patient } from '../App'
 import {
   addReceptionist,
   removeReceptionist,
@@ -13,23 +14,42 @@ interface AdminDashboardProps {
   session: Session
   clinic: Clinic
   doctors: Doctor[]
-  patientCount: number
+  patients: Patient[]
+  activityLog: ActivityEntry[]
   onAddDoctor: (doctor: Doctor) => void
   onDeleteDoctor: (doctorId: string) => void
   onClinicUpdated: (clinic: Clinic) => void
+  onLogActivity: (action: string) => void
   onLogout: () => void
 }
 
-type AdminTab = 'doctors' | 'receptionists'
+type AdminTab = 'doctors' | 'receptionists' | 'patients' | 'activity'
+
+const formatWhen = (iso: string) => {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+const roleLabel = (role: string) =>
+  role === 'admin' ? 'Admin' : role === 'receptionist' ? 'Receptionist' : 'Doctor'
 
 export default function AdminDashboard({
   session,
   clinic,
   doctors,
-  patientCount,
+  patients,
+  activityLog,
   onAddDoctor,
   onDeleteDoctor,
   onClinicUpdated,
+  onLogActivity,
   onLogout,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('doctors')
@@ -50,6 +70,7 @@ export default function AdminDashboard({
     if (updated) {
       onClinicUpdated(updated)
     }
+    onLogActivity(`Added receptionist ${name.trim()} (${email.trim()})`)
     setName('')
     setEmail('')
     setShowForm(false)
@@ -64,6 +85,7 @@ export default function AdminDashboard({
     if (updated) {
       onClinicUpdated(updated)
     }
+    onLogActivity(`Removed receptionist ${displayName}`)
   }
 
   return (
@@ -91,7 +113,7 @@ export default function AdminDashboard({
           <span className="stat-label">Receptionists</span>
         </div>
         <div className="stat-card">
-          <span className="stat-value">{patientCount}</span>
+          <span className="stat-value">{patients.length}</span>
           <span className="stat-label">Patients</span>
         </div>
       </div>
@@ -111,6 +133,20 @@ export default function AdminDashboard({
             type="button"
           >
             🗂️ Receptionists
+          </button>
+          <button
+            className={`tab ${activeTab === 'patients' ? 'active' : ''}`}
+            onClick={() => setActiveTab('patients')}
+            type="button"
+          >
+            👥 Patients
+          </button>
+          <button
+            className={`tab ${activeTab === 'activity' ? 'active' : ''}`}
+            onClick={() => setActiveTab('activity')}
+            type="button"
+          >
+            📋 Activity
           </button>
         </div>
 
@@ -193,6 +229,75 @@ export default function AdminDashboard({
                     >
                       Remove
                     </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'patients' && (
+          <div className="doctor-management">
+            <div className="doctor-header">
+              <h2>👥 All Patients</h2>
+            </div>
+            <div className="doctors-list">
+              {patients.length === 0 ? (
+                <p className="empty-state">No patients yet.</p>
+              ) : (
+                patients.map((patient) => {
+                  const doctor = doctors.find(
+                    (d) => d.id === patient.assignedDoctorId,
+                  )
+                  return (
+                    <div key={patient.id} className="doctor-card">
+                      <div className="doctor-info">
+                        <h3>{patient.name}</h3>
+                        <p className="specialty">
+                          {doctor
+                            ? `Assigned to ${doctor.name}`
+                            : 'Not assigned to a doctor'}
+                        </p>
+                        {patient.assignedBy && (
+                          <p className="email">
+                            Assigned by {patient.assignedBy.byName} (
+                            {roleLabel(patient.assignedBy.byRole)}) on{' '}
+                            {formatWhen(patient.assignedBy.at)}
+                          </p>
+                        )}
+                        <p className="email">
+                          {patient.conversations.length} consultation
+                          {patient.conversations.length === 1 ? '' : 's'}
+                          {patient.dob ? ` · DOB ${patient.dob}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="doctor-management">
+            <div className="doctor-header">
+              <h2>📋 Activity Log</h2>
+            </div>
+            <div className="activity-list">
+              {activityLog.length === 0 ? (
+                <p className="empty-state">
+                  No activity recorded yet. Actions like creating patients,
+                  assigning doctors, and adding staff will appear here.
+                </p>
+              ) : (
+                activityLog.map((entry) => (
+                  <div key={entry.id} className="activity-entry">
+                    <div className="activity-action">{entry.action}</div>
+                    <div className="activity-meta">
+                      {entry.actorName} ({roleLabel(entry.actorRole)}) ·{' '}
+                      {formatWhen(entry.at)}
+                    </div>
                   </div>
                 ))
               )}
