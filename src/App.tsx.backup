@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import DoctorView from './components/DoctorView'
 import ReceptionistView from './components/ReceptionistView'
-import DoctorLogin from './components/DoctorLogin'
 import type { Doctor } from './components/DoctorManagement'
 
 export interface Message {
@@ -340,7 +339,6 @@ function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('charting')
   const [errorMessage, setErrorMessage] = useState('')
-  const [currentLoggedInDoctor, setCurrentLoggedInDoctor] = useState<Doctor | null>(null)
 
   const { mode, workspace, doctors, patients, selectedPatientId, quickMessages } = appState
   const currentPatient =
@@ -694,23 +692,6 @@ function App() {
     setErrorMessage('')
   }
 
-  // Doctor login/logout handlers
-  const handleDoctorLogin = (doctor: Doctor) => {
-    setCurrentLoggedInDoctor(doctor)
-  }
-
-  const handleDoctorLogout = () => {
-    setCurrentLoggedInDoctor(null)
-  }
-
-  // Filter patients for logged-in doctor
-  const getVisiblePatients = () => {
-    if (!currentLoggedInDoctor) {
-      return patients // shouldn't reach here, but fallback
-    }
-    return patients.filter((p) => p.assignedDoctorId === currentLoggedInDoctor.id)
-  }
-
   // Doctor handlers
   const handleAddDoctor = (doctor: Doctor) => {
     setAppState((current) => ({
@@ -757,18 +738,6 @@ function App() {
     )
   }
 
-  // Show login screen if doctor mode but not logged in
-  if (!currentLoggedInDoctor) {
-    return (
-      <DoctorLogin
-        doctors={doctors}
-        onLogin={handleDoctorLogin}
-      />
-    )
-  }
-
-  const visiblePatients = getVisiblePatients()
-
   return (
     <DoctorView
       activeTab={activeTab}
@@ -786,14 +755,11 @@ function App() {
       onSelectQuickQA={handleSelectQuickQA}
       onSend={handleSend}
       onSetActiveTab={setActiveTab}
-      onSwitchMode={() => {
+      onSwitchMode={() =>
         setAppState((current) => ({ ...current, mode: 'receptionist' }))
-        setCurrentLoggedInDoctor(null) // logout when switching to receptionist
-      }}
+      }
       onUpdateSoap={handleUpdateSoap}
-      currentDoctor={currentLoggedInDoctor}
-      onDoctorLogout={handleDoctorLogout}
-      patients={visiblePatients}
+      patients={patients}
       pendingAction={pendingAction}
       quickMessages={quickMessages}
       selectedPatientId={selectedPatientId}
