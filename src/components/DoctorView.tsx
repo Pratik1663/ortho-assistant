@@ -6,6 +6,7 @@ import type {
   SoapNote,
   WorkspaceTab,
 } from '../App'
+import type { Doctor } from './DoctorManagement'
 import Composer from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
@@ -25,6 +26,7 @@ interface DoctorViewProps {
   pendingAction: PendingAction
   activeTab: WorkspaceTab
   errorMessage: string
+  currentDoctor: Doctor
   onSelectPatient: (id: string) => void
   onSelectQuickQA: () => void
   onSwitchMode: () => void
@@ -37,6 +39,7 @@ interface DoctorViewProps {
   onApproveSoap: () => void
   onGenerateDocuments: (keys: DocumentKey[]) => void
   onApproveDocument: (key: DocumentKey) => void
+  onDoctorLogout: () => void
 }
 
 const calculateAge = (dob: string) => {
@@ -73,6 +76,7 @@ export default function DoctorView({
   pendingAction,
   activeTab,
   errorMessage,
+  currentDoctor,
   onSelectPatient,
   onSelectQuickQA,
   onSwitchMode,
@@ -85,6 +89,7 @@ export default function DoctorView({
   onApproveSoap,
   onGenerateDocuments,
   onApproveDocument,
+  onDoctorLogout,
 }: DoctorViewProps) {
   const pending = pendingAction !== null
   const sortedPatients = [...patients].sort((a, b) => a.name.localeCompare(b.name))
@@ -107,6 +112,22 @@ export default function DoctorView({
             <strong>Orthotic Assistant</strong>
             <span>Clinical workflow</span>
           </div>
+        </div>
+
+        <div className="doctor-info-block">
+          <div className="doctor-details">
+            <p className="doctor-label">Logged in as</p>
+            <p className="doctor-name">{currentDoctor.name}</p>
+            <p className="doctor-email">{currentDoctor.email}</p>
+          </div>
+          <button
+            onClick={onDoctorLogout}
+            className="btn-logout"
+            type="button"
+            title="Logout"
+          >
+            Logout
+          </button>
         </div>
 
         <button

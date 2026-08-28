@@ -58,6 +58,60 @@
   text-transform: uppercase;
 }
 
+.doctor-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  margin: 12px 12px 8px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 7%);
+}
+
+.doctor-details {
+  margin: 0;
+}
+
+.doctor-label {
+  margin: 0 0 4px 0;
+  color: rgb(255 255 255 / 46%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.doctor-name {
+  margin: 0 0 4px 0;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.doctor-email {
+  margin: 0;
+  color: rgb(255 255 255 / 70%);
+  font-size: 0.75rem;
+}
+
+.btn-logout {
+  padding: 8px 12px;
+  border: 1px solid rgb(255 140 0 / 50%);
+  border-radius: 6px;
+  background: rgb(255 140 0 / 15%);
+  color: #ff8c00;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: rgb(255 140 0 / 25%);
+  border-color: #ff8c00;
+}
+
 .quick-entry {
   display: grid;
   width: auto;
