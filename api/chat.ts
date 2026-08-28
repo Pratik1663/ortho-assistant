@@ -278,10 +278,12 @@ type ContentBlock =
       source: { type: 'base64'; media_type: 'application/pdf'; data: string }
     }
 
+type ApiMessage = ChatMessage | { role: 'user'; content: ContentBlock[] }
+
 function buildApiMessages(
   messages: ChatMessage[],
   attachments?: Attachment[],
-): (ChatMessage | { role: 'user'; content: ContentBlock[] })[] {
+): ApiMessage[] {
   if (!attachments || attachments.length === 0) {
     return messages
   }
@@ -310,6 +312,20 @@ function buildApiMessages(
   )
   blocks.push({ type: 'text', text: last.content })
   return [...messages.slice(0, -1), { role: 'user', content: blocks }]
+}
+
+// The API rejects a conversation that ends on an assistant turn ("assistant
+// message prefill"). Consultation always ends with the practitioner's message,
+// but SOAP, document and template actions fire straight after a LEOPA reply,
+// so they need a closing user turn to make the request valid.
+const TRAILING_USER_TURN = 'Produce the output described above.'
+
+function ensureTrailingUserTurn(messages: ApiMessage[]): ApiMessage[] {
+  const last = messages[messages.length - 1]
+  if (!last || last.role !== 'assistant') {
+    return messages
+  }
+  return [...messages, { role: 'user', content: TRAILING_USER_TURN }]
 }
 
 // A system block. The first block carries cache_control so the large,
@@ -475,9 +491,8 @@ export default async function handler(
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       system: systemBlocks as unknown as Anthropic.TextBlockParam[],
-      messages: buildApiMessages(
-        parsed.messages,
-        parsed.attachments,
+      messages: ensureTrailingUserTurn(
+        buildApiMessages(parsed.messages, parsed.attachments),
       ) as Anthropic.MessageParam[],
     }
 
