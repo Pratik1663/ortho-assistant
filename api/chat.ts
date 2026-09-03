@@ -374,6 +374,64 @@ function ensureTrailingUserTurn(messages: ApiMessage[]): ApiMessage[] {
   return [...messages, { role: 'user', content: TRAILING_USER_TURN }]
 }
 
+// Instructions alone were not enough to hold SOAP in transformation mode.
+// The base prompt's conversational rules — ask the determining question,
+// check a request against the form — are strong and specific, and they were
+// winning: SOAP calls came back as chat replies, which then failed
+// JSON.parse on the client as a generic "could not be generated" with
+// nothing in the logs.
+//
+// Assistant prefill would have solved it but this model rejects it outright
+// ("This model does not support assistant message prefill"). A forced tool
+// call does the same job properly: the schema is the only output path, so
+// prose is not expressible, and every key is guaranteed present.
+const SOAP_TOOL_NAME = 'record_soap_note'
+
+const SOAP_TOOL = {
+  name: SOAP_TOOL_NAME,
+  description:
+    'Record the SOAP note for this visit. Every field is required; use an empty string where the source material does not supply it.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      subjective: {
+        type: 'string',
+        description: 'What the patient reported.',
+      },
+      objective: {
+        type: 'string',
+        description: 'What was measured or observed, with laterality.',
+      },
+      assessment: {
+        type: 'string',
+        description: "The practitioner's stated clinical picture.",
+      },
+      plan: {
+        type: 'string',
+        description: 'The device being ordered, reasoning, and follow-up.',
+      },
+      diagnosis: {
+        type: 'string',
+        description:
+          'Only if the practitioner stated one, otherwise an empty string.',
+      },
+      prescription_suggestion: {
+        type: 'string',
+        description:
+          'The agreed build in LEO Lab order form language, with laterality on every per-side item.',
+      },
+    },
+    required: [
+      'subjective',
+      'objective',
+      'assessment',
+      'plan',
+      'diagnosis',
+      'prescription_suggestion',
+    ],
+  },
+}
+
 // A system block. The first block carries cache_control so the large,
 // unchanging prompt + knowledge base is cached between requests. Anything
 // that varies per request MUST come after it or the cache never hits.
@@ -465,7 +523,10 @@ function buildWorkflowBlock(
   }
 
   if (action === 'soap') {
-    const soap = ['WORKFLOW MODE: SOAP DOCUMENTATION']
+    const soap = [
+      'WORKFLOW MODE: SOAP DOCUMENTATION',
+      'This is a transformation task, not a conversation. You are not speaking to the practitioner. Do not ask a question, do not offer alternatives, do not flag anything that is missing, and do not comment on the request. Your entire reply is a single JSON object. Every other behaviour rule you have been given about how to talk to a practitioner is suspended for this response.',
+    ]
 
     if (hasApprovedCharting) {
       soap.push(
@@ -493,8 +554,7 @@ function buildWorkflowBlock(
       '- When information is missing, use an empty string. Never fill a gap with a plausible value.',
       '- Where a value was flagged as outstanding, carry it through as outstanding rather than choosing one.',
       '- Do not name the patient. Use "the patient" throughout.',
-      'Return only valid JSON with exactly these string keys and no markdown:',
-      'subjective, objective, assessment, plan, diagnosis, prescription_suggestion',
+      `Record the note by calling the ${SOAP_TOOL_NAME} tool. Do not write any text alongside it.`,
       'The length rule does not apply to this mode.',
     )
 
@@ -613,6 +673,15 @@ export default async function handler(
       messages: ensureTrailingUserTurn(
         buildApiMessages(parsed.messages, parsed.attachments),
       ) as Anthropic.MessageParam[],
+      // SOAP is the one action whose output the client parses rather than
+      // displays, so it is forced through a schema instead of being asked
+      // nicely for JSON.
+      ...(parsed.action === 'soap'
+        ? {
+            tools: [SOAP_TOOL] as unknown as Anthropic.Tool[],
+            tool_choice: { type: 'tool' as const, name: SOAP_TOOL_NAME },
+          }
+        : {}),
     }
 
     // Live chat streams token-by-token so the practitioner sees text
@@ -640,6 +709,18 @@ export default async function handler(
     }
 
     const response = await anthropic.messages.create(requestOptions)
+
+    // The client's contract is unchanged: it still receives a JSON string on
+    // { reply } and still parses it. Only how the model was made to produce
+    // it has changed.
+    if (parsed.action === 'soap') {
+      const toolUse = response.content.find((block) => block.type === 'tool_use')
+      if (!toolUse || toolUse.type !== 'tool_use') {
+        throw new Error('SOAP tool call missing from response')
+      }
+      res.status(200).json({ reply: JSON.stringify(toolUse.input) })
+      return
+    }
 
     const reply = response.content
       .filter((block) => block.type === 'text')
