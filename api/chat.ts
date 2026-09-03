@@ -416,7 +416,7 @@ const SOAP_TOOL = {
         type: 'string',
         enum: ['practitioner_stated', 'ai_inferred', 'not_assessed'],
         description:
-          "practitioner_stated only when the practitioner named the condition themselves. ai_inferred when you are naming or narrowing it from the findings, including any 'consistent with' or 'likely' phrasing. not_assessed when there is nothing to say, in which case assessment must be an empty string.",
+          "practitioner_stated only when the practitioner named the condition themselves. ai_inferred when you are naming or narrowing it from the findings, including any 'consistent with' or 'likely' phrasing — this is a normal and expected outcome, not a fallback. not_assessed only when the findings genuinely support nothing, in which case assessment must be an empty string.",
       },
       plan: {
         type: 'string',
@@ -558,12 +558,12 @@ function buildWorkflowBlock(
       'Field-by-field:',
       '- subjective: what the patient reported. Symptoms, history, duration, aggravating and relieving factors, footwear and activity as described.',
       '- objective: what was measured or observed. Include laterality and the actual values.',
-      '- assessment: the clinical picture. You may read the findings and name what they point to. What you must not do is misattribute it: set assessment_source to ai_inferred whenever the conclusion is yours rather than the practitioner\'s, and never write that the clinician identified, noted, or determined something they did not say. If the practitioner stated nothing and the findings support nothing, use an empty string with not_assessed.',
+      '- assessment: the clinical picture. Where the findings point clearly to something, say so — an empty assessment is for when there is genuinely nothing to say, not for when you are being cautious. Read the findings and name what they point to. What you must not do is misattribute it: set assessment_source to ai_inferred whenever the conclusion is yours rather than the practitioner\'s, and never write that the clinician identified, noted, or determined something they did not say. If the practitioner stated nothing and the findings support nothing, use an empty string with not_assessed.',
       '- plan: the device being ordered and the reasoning, plus follow-up and dispensing steps if they were discussed.',
       '- diagnosis: only if the practitioner stated one. Otherwise an empty string.',
       '- prescription_suggestion: the build as agreed in the conversation, in LEO Lab order form language, with laterality on every per-side item. Do not add options that were never discussed and do not resolve an option the practitioner left open.',
       'Rules for this mode:',
-      '- Do not infer or add findings, diagnoses, prescriptions, or facts that were not supplied.',
+      '- Do not add findings, measurements, prescriptions, or facts that were not supplied. The assessment field is the single exception, and only under the attribution rule above — everywhere else, absence of information means an empty string, never a plausible value.',
       '- The diagnosis field is separate and stricter: it carries only a diagnosis the practitioner actually stated. An inferred assessment never becomes a diagnosis.',
       '- When information is missing, use an empty string. Never fill a gap with a plausible value.',
       '- Where a value was flagged as outstanding, carry it through as outstanding rather than choosing one.',
