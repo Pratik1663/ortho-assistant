@@ -6,6 +6,7 @@ import type {
   OutgoingAttachment,
   Patient,
   PatientConversation,
+  PendingAction,
   SoapNote,
   WorkspaceTab,
 } from '../App'
@@ -18,8 +19,6 @@ import MessageList from './MessageList'
 import TemplateManager from './TemplateManager'
 import SoapReview from './SoapReview'
 import './DoctorView.css'
-
-type PendingAction = 'chat' | 'soap' | 'documents' | 'template' | null
 
 interface DoctorViewProps {
   patients: Patient[]
@@ -36,6 +35,12 @@ interface DoctorViewProps {
   onSelectQuickQA: () => void
   onSend: (content: string, attachments: OutgoingAttachment[]) => void
   onUpdateCapture: (value: string) => void
+  onGenerateCharting: () => void
+  onUpdateCharting: (value: string) => void
+  onApproveCharting: () => void
+  onExportData: () => void
+  onImportData: (file: File) => void
+  saveError: string
   onNewConsultation: () => void
   onSelectConversation: (id: string) => void
   onSetActiveTab: (tab: WorkspaceTab) => void
@@ -114,6 +119,12 @@ export default function DoctorView({
   onSelectQuickQA,
   onSend,
   onUpdateCapture,
+  onGenerateCharting,
+  onUpdateCharting,
+  onApproveCharting,
+  onExportData,
+  onImportData,
+  saveError,
   onNewConsultation,
   onSelectConversation,
   onSetActiveTab,
@@ -258,6 +269,38 @@ export default function DoctorView({
           </span>
         </button>
 
+        <div className="backup-block">
+          <p className="backup-label">Backup</p>
+          <p className="backup-hint">
+            Records live only in this browser. Export regularly.
+          </p>
+          <div className="backup-actions">
+            <button
+              className="backup-button"
+              disabled={pending}
+              onClick={onExportData}
+              type="button"
+            >
+              Export
+            </button>
+            <label className={`backup-button ${pending ? 'disabled' : ''}`}>
+              Restore
+              <input
+                accept="application/json,.json"
+                disabled={pending}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) {
+                    onImportData(file)
+                  }
+                  event.target.value = ''
+                }}
+                type="file"
+              />
+            </label>
+          </div>
+        </div>
+
         <div className="sidebar-header">
           <div>
             <p className="sidebar-kicker">Patient files</p>
@@ -301,6 +344,12 @@ export default function DoctorView({
         <div className="doctor-app-header">
           <Header />
         </div>
+
+        {saveError && (
+          <div className="storage-error" role="alert">
+            <strong>Not saved.</strong> {saveError}
+          </div>
+        )}
 
         {errorMessage && <div className="workflow-error" role="alert">{errorMessage}</div>}
 
@@ -425,10 +474,20 @@ export default function DoctorView({
             <div className="workflow-content">
               {activeTab === 'capture' && (
                 <CaptureView
+                  approved={currentConversation.chartingApproved}
                   capture={currentConversation.capture}
+                  chartingNotes={currentConversation.chartingNotes}
                   disabled={pending}
+                  generating={pendingAction === 'charting'}
+                  onApprove={onApproveCharting}
                   onContinue={() => onSetActiveTab('consultation')}
+                  onGenerate={onGenerateCharting}
                   onUpdateCapture={onUpdateCapture}
+                  onUpdateCharting={onUpdateCharting}
+                  stale={
+                    currentConversation.chartingNotes.length > 0 &&
+                    currentConversation.capture !== currentConversation.chartingSource
+                  }
                 />
               )}
 
@@ -439,7 +498,8 @@ export default function DoctorView({
                     pending={pendingAction === 'chat'}
                   />
                   <div className="charting-footer">
-                    {currentConversation.messages.length > 0 && (
+                    {(currentConversation.messages.length > 0 ||
+                      currentConversation.chartingApproved) && (
                       <div className="charting-action-row">
                         {!currentConversation.soapNote ? (
                           <button

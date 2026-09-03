@@ -1009,3 +1009,97 @@
   border-radius: 6px;
 }
 
+.storage-error {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #742a2a;
+  background: #fff5f5;
+  border: 1px solid #fc8181;
+  border-left: 4px solid #c53030;
+  border-radius: 6px;
+}
+
+.backup-block {
+  margin: 4px 12px 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.backup-label {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.backup-hint {
+  margin: 6px 0 10px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.backup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.backup-button {
+  flex: 1;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.backup-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.backup-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.backup-button input[type='file'] {
+  display: none;
+}
+
+/* Stage 2 — charting summary. Append to src/components/DoctorView.css */
+
+.capture-summary {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e3e6ec;
+}
+
+.capture-stale {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid #d21f2f;
+  border-radius: 4px;
+  background: #fdf1f2;
+  color: #7c1420;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+/* The footer holds a count on the left and an action on the right. It was
+   text-only before Stage 2, so it needs to space its children now. */
+.capture-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
