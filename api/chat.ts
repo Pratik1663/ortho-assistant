@@ -404,7 +404,8 @@ const SOAP_TOOL = {
       },
       assessment: {
         type: 'string',
-        description: "The practitioner's stated clinical picture.",
+        description:
+          'Only what the practitioner actually stated. Empty string if they stated nothing. Never name a condition they did not name.',
       },
       plan: {
         type: 'string',
@@ -545,12 +546,13 @@ function buildWorkflowBlock(
       'Field-by-field:',
       '- subjective: what the patient reported. Symptoms, history, duration, aggravating and relieving factors, footwear and activity as described.',
       '- objective: what was measured or observed. Include laterality and the actual values.',
-      '- assessment: the practitioner\'s stated clinical picture. Do not author a diagnosis that was not supplied.',
+      '- assessment: only what the practitioner actually stated about the clinical picture. If they stated nothing, use an empty string. Do not synthesise a condition from the findings, however strongly the findings suggest one, and never write that the clinician identified something they did not say. Naming a condition here is the same error as naming it in diagnosis.',
       '- plan: the device being ordered and the reasoning, plus follow-up and dispensing steps if they were discussed.',
       '- diagnosis: only if the practitioner stated one. Otherwise an empty string.',
       '- prescription_suggestion: the build as agreed in the conversation, in LEO Lab order form language, with laterality on every per-side item. Do not add options that were never discussed and do not resolve an option the practitioner left open.',
       'Rules for this mode:',
       '- Do not infer or add findings, diagnoses, prescriptions, or facts that were not supplied.',
+      '- A recognisable pattern in the findings is not a diagnosis. Positive tests, symptom timing, and site of tenderness are observations. Report them as observations and stop there. Do not write "consistent with", "suggestive of", or any other phrasing that names a condition the practitioner did not name.',
       '- When information is missing, use an empty string. Never fill a gap with a plausible value.',
       '- Where a value was flagged as outstanding, carry it through as outstanding rather than choosing one.',
       '- Do not name the patient. Use "the patient" throughout.',
