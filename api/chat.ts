@@ -293,7 +293,7 @@ function parseBody(body: unknown): ParsedBody | null {
   const approvedCharting = requestBody.approvedCharting
   if (approvedCharting !== undefined) {
     if (
-      action !== 'soap' ||
+      (action !== 'soap' && action !== 'consultation') ||
       typeof approvedCharting !== 'string' ||
       approvedCharting.length === 0 ||
       approvedCharting.length > 20_000
@@ -499,6 +499,15 @@ function buildWorkflowBlock(
   template?: string,
   hasApprovedCharting?: boolean,
 ): string | null {
+  if (action === 'consultation' && hasApprovedCharting) {
+    return [
+      'CHARTING AVAILABLE',
+      'The APPROVED CHARTING NOTES block above is this visit, already charted and approved by the practitioner. Treat it as the presentation you are building from — do not ask them to describe the patient again, and do not ask for anything the notes already answer.',
+      'Open by working from what is charted. Ask only for what is genuinely missing or undetermined for the build.',
+      'The notes are a record of the visit, not a prescription. Nothing in them is a decision about the device unless the practitioner says so here.',
+    ].join('\n')
+  }
+
   if (action === 'template') {
     return [
       'WORKFLOW MODE: TEMPLATE TRANSCRIPTION',

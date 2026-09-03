@@ -678,6 +678,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     options: {
       patientContext?: PatientContext
       attachments?: OutgoingAttachment[]
+      approvedCharting?: string
     },
     onText: (textSoFar: string) => void,
   ) => {
@@ -797,6 +798,11 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
         {
           patientContext: getPatientContext(currentPatient),
           attachments: attachments.length > 0 ? attachments : undefined,
+          approvedCharting:
+            currentConversation.chartingApproved &&
+            currentConversation.chartingNotes.trim().length > 0
+              ? currentConversation.chartingNotes.trim()
+              : undefined,
         },
         (textSoFar) => {
           updateConversation(patientId, conversationId, (conversation) => ({
