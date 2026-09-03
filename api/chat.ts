@@ -387,6 +387,11 @@ function ensureTrailingUserTurn(messages: ApiMessage[]): ApiMessage[] {
 // prose is not expressible, and every key is guaranteed present.
 const SOAP_TOOL_NAME = 'record_soap_note'
 
+// Shown to the practitioner in the editable SOAP draft. They can delete it if
+// they are adopting the impression as their own, which is the point: the
+// default is honest and changing it is a deliberate act.
+const AI_ASSESSMENT_PREFIX = 'AI-generated impression, not stated by clinician: '
+
 const SOAP_TOOL = {
   name: SOAP_TOOL_NAME,
   description:
@@ -405,7 +410,13 @@ const SOAP_TOOL = {
       assessment: {
         type: 'string',
         description:
-          'Only what the practitioner actually stated. Empty string if they stated nothing. Never name a condition they did not name.',
+          'The clinical picture. May be what the practitioner stated, or your own reading of the findings — declare which in assessment_source.',
+      },
+      assessment_source: {
+        type: 'string',
+        enum: ['practitioner_stated', 'ai_inferred', 'not_assessed'],
+        description:
+          "practitioner_stated only when the practitioner named the condition themselves. ai_inferred when you are naming or narrowing it from the findings, including any 'consistent with' or 'likely' phrasing. not_assessed when there is nothing to say, in which case assessment must be an empty string.",
       },
       plan: {
         type: 'string',
@@ -426,6 +437,7 @@ const SOAP_TOOL = {
       'subjective',
       'objective',
       'assessment',
+      'assessment_source',
       'plan',
       'diagnosis',
       'prescription_suggestion',
@@ -546,13 +558,13 @@ function buildWorkflowBlock(
       'Field-by-field:',
       '- subjective: what the patient reported. Symptoms, history, duration, aggravating and relieving factors, footwear and activity as described.',
       '- objective: what was measured or observed. Include laterality and the actual values.',
-      '- assessment: only what the practitioner actually stated about the clinical picture. If they stated nothing, use an empty string. Do not synthesise a condition from the findings, however strongly the findings suggest one, and never write that the clinician identified something they did not say. Naming a condition here is the same error as naming it in diagnosis.',
+      '- assessment: the clinical picture. You may read the findings and name what they point to. What you must not do is misattribute it: set assessment_source to ai_inferred whenever the conclusion is yours rather than the practitioner\'s, and never write that the clinician identified, noted, or determined something they did not say. If the practitioner stated nothing and the findings support nothing, use an empty string with not_assessed.',
       '- plan: the device being ordered and the reasoning, plus follow-up and dispensing steps if they were discussed.',
       '- diagnosis: only if the practitioner stated one. Otherwise an empty string.',
       '- prescription_suggestion: the build as agreed in the conversation, in LEO Lab order form language, with laterality on every per-side item. Do not add options that were never discussed and do not resolve an option the practitioner left open.',
       'Rules for this mode:',
       '- Do not infer or add findings, diagnoses, prescriptions, or facts that were not supplied.',
-      '- A recognisable pattern in the findings is not a diagnosis. Positive tests, symptom timing, and site of tenderness are observations. Report them as observations and stop there. Do not write "consistent with", "suggestive of", or any other phrasing that names a condition the practitioner did not name.',
+      '- The diagnosis field is separate and stricter: it carries only a diagnosis the practitioner actually stated. An inferred assessment never becomes a diagnosis.',
       '- When information is missing, use an empty string. Never fill a gap with a plausible value.',
       '- Where a value was flagged as outstanding, carry it through as outstanding rather than choosing one.',
       '- Do not name the patient. Use "the patient" throughout.',
@@ -720,7 +732,35 @@ export default async function handler(
       if (!toolUse || toolUse.type !== 'tool_use') {
         throw new Error('SOAP tool call missing from response')
       }
-      res.status(200).json({ reply: JSON.stringify(toolUse.input) })
+
+      const note = toolUse.input as Record<string, unknown>
+      const assessment =
+        typeof note.assessment === 'string' ? note.assessment.trim() : ''
+
+      // Three rounds of prompt wording failed to stop the model inferring a
+      // diagnosis from a strong pattern, and the inference is clinically
+      // useful anyway. The real problem was attribution: the note read as
+      // though the clinician had said it. So the model declares the source
+      // and the label is applied here, where it cannot be reasoned away.
+      const labelled =
+        note.assessment_source === 'ai_inferred' && assessment.length > 0
+          ? `${AI_ASSESSMENT_PREFIX}${assessment}`
+          : note.assessment_source === 'not_assessed'
+            ? ''
+            : assessment
+
+      // assessment_source is scaffolding for the model, not part of the
+      // client's SoapNote shape. It is dropped here.
+      res.status(200).json({
+        reply: JSON.stringify({
+          subjective: note.subjective ?? '',
+          objective: note.objective ?? '',
+          assessment: labelled,
+          plan: note.plan ?? '',
+          diagnosis: note.diagnosis ?? '',
+          prescription_suggestion: note.prescription_suggestion ?? '',
+        }),
+      })
       return
     }
 
