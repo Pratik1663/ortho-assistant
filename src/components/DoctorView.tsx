@@ -10,6 +10,7 @@ import type {
   WorkspaceTab,
 } from '../App'
 import type { Doctor } from './DoctorManagement'
+import CaptureView from './CaptureView'
 import Composer from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
@@ -34,6 +35,7 @@ interface DoctorViewProps {
   onSelectPatient: (id: string) => void
   onSelectQuickQA: () => void
   onSend: (content: string, attachments: OutgoingAttachment[]) => void
+  onUpdateCapture: (value: string) => void
   onNewConsultation: () => void
   onSelectConversation: (id: string) => void
   onSetActiveTab: (tab: WorkspaceTab) => void
@@ -70,12 +72,21 @@ const calculateAge = (dob: string) => {
   return Math.max(0, age)
 }
 
-const formatConsultation = (conversation: PatientConversation, index: number) => {
+// Labelled by date and time rather than a number. Consultations are stored
+// newest-first, so an index would count backwards from how a clinician would.
+// Time is included because same-day repeat visits happen.
+const formatConsultation = (conversation: PatientConversation) => {
   const date = new Date(conversation.createdAt)
-  const formatted = Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
-  return `Consultation ${index + 1}${formatted ? ` — ${formatted}` : ''}`
+  if (Number.isNaN(date.getTime())) {
+    return 'Undated consultation'
+  }
+  return date.toLocaleString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
 export default function DoctorView({
@@ -92,6 +103,7 @@ export default function DoctorView({
   onSelectPatient,
   onSelectQuickQA,
   onSend,
+  onUpdateCapture,
   onNewConsultation,
   onSelectConversation,
   onSetActiveTab,
@@ -121,10 +133,53 @@ export default function DoctorView({
 
   const [showTemplates, setShowTemplates] = useState(false)
 
+  // The warning names what is actually at risk. Clearing a visit that has
+  // approved clinical work is a heavier action than clearing a chat thread,
+  // so the message says so rather than leaving it generic.
   const confirmClear = (warnAboutSoap: boolean) => {
-    const message = warnAboutSoap
-      ? 'Clear this consultation? The messages, SOAP draft, and any generated documents will be removed. This cannot be undone.'
-      : 'Clear this Quick Q&A conversation? This cannot be undone.'
+    if (!warnAboutSoap) {
+      if (window.confirm('Clear this Quick Q&A conversation? This cannot be undone.')) {
+        onClearConversation()
+      }
+      return
+    }
+
+    const approvedDocs = currentConversation
+      ? Object.values(currentConversation.documents).filter((doc) => doc?.approved)
+          .length
+      : 0
+    const soapApproved = currentConversation?.soapApproved ?? false
+
+    const atRisk: string[] = ['the consultation messages']
+    if (soapApproved) {
+      atRisk.push('the APPROVED SOAP note')
+    } else if (currentConversation?.soapNote) {
+      atRisk.push('the SOAP draft')
+    }
+    if (approvedDocs > 0) {
+      atRisk.push(
+        `${approvedDocs} APPROVED document${approvedDocs === 1 ? '' : 's'}`,
+      )
+    } else if (
+      currentConversation &&
+      Object.keys(currentConversation.documents).length > 0
+    ) {
+      atRisk.push('the generated documents')
+    }
+
+    const heavy = soapApproved || approvedDocs > 0
+    const message = [
+      heavy
+        ? 'This visit contains approved clinical work.'
+        : 'Clear this visit?',
+      '',
+      `The following will be permanently removed: ${atRisk.join(', ')}.`,
+      '',
+      'Your charting notes will be kept.',
+      '',
+      'This cannot be undone. Continue?',
+    ].join('\n')
+
     if (window.confirm(message)) {
       onClearConversation()
     }
@@ -297,9 +352,9 @@ export default function DoctorView({
                     onChange={(event) => onSelectConversation(event.target.value)}
                     value={currentConversation.id}
                   >
-                    {currentPatient.conversations.map((conversation, index) => (
+                    {currentPatient.conversations.map((conversation) => (
                       <option key={conversation.id} value={conversation.id}>
-                        {formatConsultation(conversation, index)}
+                        {formatConsultation(conversation)}
                       </option>
                     ))}
                   </select>
@@ -322,11 +377,18 @@ export default function DoctorView({
 
             <nav className="workflow-tabs" aria-label="Patient workflow">
               <button
-                className={activeTab === 'charting' ? 'active' : ''}
-                onClick={() => onSetActiveTab('charting')}
+                className={activeTab === 'capture' ? 'active' : ''}
+                onClick={() => onSetActiveTab('capture')}
                 type="button"
               >
                 <span>1</span> Charting
+              </button>
+              <button
+                className={activeTab === 'consultation' ? 'active' : ''}
+                onClick={() => onSetActiveTab('consultation')}
+                type="button"
+              >
+                <span>2</span> Consultation
               </button>
               <button
                 className={activeTab === 'soap' ? 'active' : ''}
@@ -334,7 +396,7 @@ export default function DoctorView({
                 onClick={() => onSetActiveTab('soap')}
                 type="button"
               >
-                <span>2</span> SOAP review
+                <span>3</span> SOAP review
               </button>
               <button
                 className={activeTab === 'dispense' ? 'active' : ''}
@@ -342,12 +404,21 @@ export default function DoctorView({
                 onClick={() => onSetActiveTab('dispense')}
                 type="button"
               >
-                <span>3</span> Documents
+                <span>4</span> Documents
               </button>
             </nav>
 
             <div className="workflow-content">
-              {activeTab === 'charting' && (
+              {activeTab === 'capture' && (
+                <CaptureView
+                  capture={currentConversation.capture}
+                  disabled={pending}
+                  onContinue={() => onSetActiveTab('consultation')}
+                  onUpdateCapture={onUpdateCapture}
+                />
+              )}
+
+              {activeTab === 'consultation' && (
                 <div className="charting-workspace">
                   <MessageList
                     messages={currentConversation.messages}

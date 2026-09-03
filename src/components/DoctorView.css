@@ -942,3 +942,59 @@
     animation: none;
   }
 }
+/* ---------------------------------------------------------------
+   Stage 1 â€” Charting (capture) panel
+   Append to the end of src/components/DoctorView.css
+   --------------------------------------------------------------- */
+
+.capture-field {
+  display: block;
+  margin-top: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #4a5568;
+}
+
+.capture-field textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px 16px;
+  font: inherit;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #1a202c;
+  line-height: 1.6;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  background: #fff;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.capture-field textarea:focus {
+  outline: none;
+  border-color: #d21f2f;
+  box-shadow: 0 0 0 3px rgba(210, 31, 47, 0.12);
+}
+
+.capture-field textarea:disabled {
+  background: #f7fafc;
+  color: #718096;
+}
+
+.capture-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.capture-count {
+  font-size: 0.8rem;
+  color: #718096;
+}
+

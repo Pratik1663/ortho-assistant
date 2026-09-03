@@ -62,6 +62,9 @@ export interface DoctorTemplate {
 export interface PatientConversation {
   id: string
   createdAt: string
+  // Stage 1 — the practitioner's own notes for this visit, pasted in.
+  // Raw text; nothing is inferred from it until Stage 2 summarises it.
+  capture: string
   messages: Message[]
   soapNote: SoapNote | null
   soapApproved: boolean
@@ -109,7 +112,7 @@ export interface PatientInput {
   notes: string
 }
 
-export type WorkspaceTab = 'charting' | 'soap' | 'dispense'
+export type WorkspaceTab = 'capture' | 'consultation' | 'soap' | 'dispense'
 
 type Workspace = 'patient' | 'quick'
 type PendingAction = 'chat' | 'soap' | 'documents' | 'template' | null
@@ -145,6 +148,7 @@ const createId = (prefix: string) => {
 const createConversation = (): PatientConversation => ({
   id: createId('consultation'),
   createdAt: new Date().toISOString(),
+  capture: '',
   messages: [],
   soapNote: null,
   soapApproved: false,
@@ -232,6 +236,8 @@ const normaliseConversation = (value: unknown): PatientConversation | null => {
       typeof conversation.createdAt === 'string'
         ? conversation.createdAt
         : new Date().toISOString(),
+    // Conversations saved before Stage 1 existed have no capture field.
+    capture: typeof conversation.capture === 'string' ? conversation.capture : '',
     messages: conversation.messages.filter(isMessage),
     soapNote: normaliseSoapNote(conversation.soapNote),
     soapApproved: conversation.soapApproved === true,
@@ -516,7 +522,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
   const [appState, setAppState] = useState<AppState>(() => loadState(storageKey))
   const [clinic, setClinic] = useState<Clinic | null>(() => getClinic(session.clinicId))
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('charting')
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('capture')
   const [errorMessage, setErrorMessage] = useState('')
 
   const {
@@ -806,7 +812,19 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
         `Cleared a consultation for patient "${patientName}"`,
       ),
     }))
-    setActiveTab('charting')
+    setActiveTab('capture')
+  }
+
+  // Stage 1. Stores the practitioner's pasted notes for this visit.
+  // Nothing downstream reads this yet — Stage 2 will.
+  const handleUpdateCapture = (value: string) => {
+    if (!currentPatient || !currentConversation) {
+      return
+    }
+    updateConversation(currentPatient.id, currentConversation.id, (conversation) => ({
+      ...conversation,
+      capture: value,
+    }))
   }
 
   const handleGenerateSoap = async () => {
@@ -1043,7 +1061,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
         `Created patient "${newPatient.name}"`,
       ),
     }))
-    setActiveTab('charting')
+    setActiveTab('capture')
   }
 
   const handleUpdatePatient = (id: string, input: PatientInput) => {
@@ -1086,7 +1104,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       workspace: 'patient',
       selectedPatientId: id,
     }))
-    setActiveTab('charting')
+    setActiveTab('capture')
     setErrorMessage('')
   }
 
@@ -1115,7 +1133,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
           : patient,
       ),
     }))
-    setActiveTab('charting')
+    setActiveTab('capture')
     setErrorMessage('')
   }
 
@@ -1131,7 +1149,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
           : patient,
       ),
     }))
-    setActiveTab('charting')
+    setActiveTab('capture')
     setErrorMessage('')
   }
 
@@ -1293,6 +1311,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       onSelectPatient={handleSelectPatient}
       onSelectQuickQA={handleSelectQuickQA}
       onSend={handleSend}
+      onUpdateCapture={handleUpdateCapture}
       onSetActiveTab={setActiveTab}
       onUpdateSoap={handleUpdateSoap}
       currentDoctor={currentLoggedInDoctor}
