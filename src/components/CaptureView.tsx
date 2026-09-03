@@ -33,7 +33,7 @@ export default function CaptureView({
         </div>
         {hasContent && (
           <button className="workflow-primary" onClick={onContinue} type="button">
-            Continue to consultation →
+            Continue to Ask LEOPA →
           </button>
         )}
       </div>
@@ -56,6 +56,12 @@ export default function CaptureView({
             : 'Nothing captured yet'}
         </span>
       </div>
+
+      <p className="capture-notice">
+        These notes are stored with the visit but are not yet used to generate
+        the SOAP note — SOAP is still built from the Ask LEOPA conversation.
+        Summary generation is the next stage to be built.
+      </p>
     </section>
   )
 }

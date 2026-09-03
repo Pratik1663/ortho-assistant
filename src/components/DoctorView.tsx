@@ -72,21 +72,31 @@ const calculateAge = (dob: string) => {
   return Math.max(0, age)
 }
 
-// Labelled by date and time rather than a number. Consultations are stored
-// newest-first, so an index would count backwards from how a clinician would.
+// Consultations are stored newest-created-first, but they are labelled by
+// the date charted, which can differ. Sorting by the same stamp the label
+// shows keeps the dropdown in the order the reader expects.
+const consultationOrder = (conversation: PatientConversation) =>
+  conversation.chartedAt ?? conversation.createdAt
+
+// Labelled by the date the patient was actually seen — the day charting
+// happened — not the day the record was opened, which may be earlier if a
+// receptionist created it in advance. Falls back to createdAt for visits
+// that were never charted, and for records saved before chartedAt existed.
 // Time is included because same-day repeat visits happen.
 const formatConsultation = (conversation: PatientConversation) => {
-  const date = new Date(conversation.createdAt)
+  const stamp = conversation.chartedAt ?? conversation.createdAt
+  const date = new Date(stamp)
   if (Number.isNaN(date.getTime())) {
     return 'Undated consultation'
   }
-  return date.toLocaleString('en-CA', {
+  const formatted = date.toLocaleString('en-CA', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   })
+  return conversation.chartedAt ? formatted : `${formatted} (not charted)`
 }
 
 export default function DoctorView({
@@ -352,11 +362,15 @@ export default function DoctorView({
                     onChange={(event) => onSelectConversation(event.target.value)}
                     value={currentConversation.id}
                   >
-                    {currentPatient.conversations.map((conversation) => (
-                      <option key={conversation.id} value={conversation.id}>
-                        {formatConsultation(conversation)}
-                      </option>
-                    ))}
+                    {[...currentPatient.conversations]
+                      .sort((a, b) =>
+                        consultationOrder(b).localeCompare(consultationOrder(a)),
+                      )
+                      .map((conversation) => (
+                        <option key={conversation.id} value={conversation.id}>
+                          {formatConsultation(conversation)}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <button disabled={pending} onClick={onNewConsultation} type="button">
@@ -388,7 +402,7 @@ export default function DoctorView({
                 onClick={() => onSetActiveTab('consultation')}
                 type="button"
               >
-                <span>2</span> Consultation
+                <span>2</span> Ask LEOPA
               </button>
               <button
                 className={activeTab === 'soap' ? 'active' : ''}

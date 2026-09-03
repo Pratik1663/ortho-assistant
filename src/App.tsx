@@ -62,6 +62,11 @@ export interface DoctorTemplate {
 export interface PatientConversation {
   id: string
   createdAt: string
+  // When the practitioner first charted this visit — i.e. the day the
+  // patient was actually seen. Distinct from createdAt, which is only when
+  // the record was opened (a receptionist may create it days earlier).
+  // Set once, on the first keystroke in Charting, and never moved after.
+  chartedAt: string | null
   // Stage 1 — the practitioner's own notes for this visit, pasted in.
   // Raw text; nothing is inferred from it until Stage 2 summarises it.
   capture: string
@@ -148,6 +153,7 @@ const createId = (prefix: string) => {
 const createConversation = (): PatientConversation => ({
   id: createId('consultation'),
   createdAt: new Date().toISOString(),
+  chartedAt: null,
   capture: '',
   messages: [],
   soapNote: null,
@@ -236,6 +242,8 @@ const normaliseConversation = (value: unknown): PatientConversation | null => {
       typeof conversation.createdAt === 'string'
         ? conversation.createdAt
         : new Date().toISOString(),
+    chartedAt:
+      typeof conversation.chartedAt === 'string' ? conversation.chartedAt : null,
     // Conversations saved before Stage 1 existed have no capture field.
     capture: typeof conversation.capture === 'string' ? conversation.capture : '',
     messages: conversation.messages.filter(isMessage),
@@ -824,6 +832,11 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     updateConversation(currentPatient.id, currentConversation.id, (conversation) => ({
       ...conversation,
       capture: value,
+      // Stamped on the first keystroke only. This is the day the patient was
+      // seen, so later edits must not move it.
+      chartedAt:
+        conversation.chartedAt ??
+        (value.trim().length > 0 ? new Date().toISOString() : null),
     }))
   }
 

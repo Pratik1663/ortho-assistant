@@ -998,3 +998,14 @@
   color: #718096;
 }
 
+.capture-notice {
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #744210;
+  background: #fffaf0;
+  border: 1px solid #f6e05e;
+  border-radius: 6px;
+}
+
