@@ -374,6 +374,28 @@ function ensureTrailingUserTurn(messages: ApiMessage[]): ApiMessage[] {
   return [...messages, { role: 'user', content: TRAILING_USER_TURN }]
 }
 
+// Instructions alone were not enough to hold SOAP in transformation mode.
+// The base prompt's conversational rules — ask the determining question,
+// check a request against the form — are strong and specific, and they were
+// winning: SOAP calls came back as chat replies, which then failed JSON.parse
+// on the client as a generic "could not be generated" with nothing in the
+// logs. Opening the assistant turn with a brace removes the choice. The model
+// cannot begin with prose because its reply is already mid-object.
+//
+// Must run after ensureTrailingUserTurn, or that function sees this turn and
+// appends a user message after it.
+const JSON_PREFILL = '{'
+
+function withJsonPrefill(
+  messages: ApiMessage[],
+  action: ChatAction,
+): ApiMessage[] {
+  if (action !== 'soap') {
+    return messages
+  }
+  return [...messages, { role: 'assistant', content: JSON_PREFILL }]
+}
+
 // A system block. The first block carries cache_control so the large,
 // unchanging prompt + knowledge base is cached between requests. Anything
 // that varies per request MUST come after it or the cache never hits.
@@ -465,7 +487,10 @@ function buildWorkflowBlock(
   }
 
   if (action === 'soap') {
-    const soap = ['WORKFLOW MODE: SOAP DOCUMENTATION']
+    const soap = [
+      'WORKFLOW MODE: SOAP DOCUMENTATION',
+      'This is a transformation task, not a conversation. You are not speaking to the practitioner. Do not ask a question, do not offer alternatives, do not flag anything that is missing, and do not comment on the request. Your entire reply is a single JSON object. Every other behaviour rule you have been given about how to talk to a practitioner is suspended for this response.',
+    ]
 
     if (hasApprovedCharting) {
       soap.push(
@@ -496,6 +521,7 @@ function buildWorkflowBlock(
       'Return only valid JSON with exactly these string keys and no markdown:',
       'subjective, objective, assessment, plan, diagnosis, prescription_suggestion',
       'The length rule does not apply to this mode.',
+      'Your reply begins with an opening brace and contains nothing but the JSON object. No preamble, no questions, no closing remark.',
     )
 
     return soap.join('\n')
@@ -610,8 +636,11 @@ export default async function handler(
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       system: systemBlocks as unknown as Anthropic.TextBlockParam[],
-      messages: ensureTrailingUserTurn(
-        buildApiMessages(parsed.messages, parsed.attachments),
+      messages: withJsonPrefill(
+        ensureTrailingUserTurn(
+          buildApiMessages(parsed.messages, parsed.attachments),
+        ),
+        parsed.action,
       ) as Anthropic.MessageParam[],
     }
 
@@ -641,10 +670,14 @@ export default async function handler(
 
     const response = await anthropic.messages.create(requestOptions)
 
-    const reply = response.content
+    const text = response.content
       .filter((block) => block.type === 'text')
       .map((block) => block.text)
       .join('')
+
+    // The prefilled brace is not echoed back in the response, so it has to be
+    // restored or the client parses a fragment.
+    const reply = parsed.action === 'soap' ? `${JSON_PREFILL}${text}` : text
 
     res.status(200).json({ reply })
   } catch (error: unknown) {
