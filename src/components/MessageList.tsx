@@ -155,9 +155,21 @@ function MessageList({
                 const showInput =
                   controlsAllowed && Boolean(segment.input) && Boolean(segment.label)
 
+                // The field name lives in the marker, so chips can always be
+                // named even when the reply text does not repeat it — several
+                // markers in a row otherwise render as anonymous buttons.
+                // Checking the last line avoids saying the name twice.
+                const lastLine = segment.text.split('\n').pop() ?? ''
+                const needsLabel =
+                  Boolean(segment.label) &&
+                  !lastLine.toLowerCase().includes((segment.label ?? '').toLowerCase())
+
                 return (
                   <span key={segmentIndex}>
                     {segment.text}
+                    {(showChips || showInput) && needsLabel && (
+                      <span className="option-group-label">{segment.label}</span>
+                    )}
                     {showInput && segment.label && (
                       <InlineValue
                         key={`${index}-${segment.label}`}
