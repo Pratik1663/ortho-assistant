@@ -4,13 +4,19 @@ import FileUploadButton from './FileUploadButton'
 import MicrophoneRecorder from './MicrophoneRecorder'
 
 /**
- * A form option chosen by clicking a chip. The nonce changes on every click so
- * the same value can be staged twice in a row; the text alone would not
+ * An answer chosen by clicking a chip. The nonce changes on every click so the
+ * same value can be staged twice in a row; the value alone would not
  * re-trigger the effect.
  */
 export interface StagedOption {
-  text: string
+  label?: string
+  value: string
   nonce: number
+}
+
+interface StagedAnswer {
+  label?: string
+  value: string
 }
 
 interface ComposerProps {
@@ -18,30 +24,67 @@ interface ComposerProps {
   pending: boolean
   patientName?: string
   stagedOption?: StagedOption | null
+  /** Lets the parent show which chips are already chosen. */
+  onStagedChange?: (answers: Record<string, string>) => void
 }
 
-function Composer({ onSend, pending, patientName, stagedOption }: ComposerProps) {
+function Composer({
+  onSend,
+  pending,
+  patientName,
+  stagedOption,
+  onStagedChange,
+}: ComposerProps) {
   const [content, setContent] = useState('')
   const [interim, setInterim] = useState('')
   const [attachments, setAttachments] = useState<OutgoingAttachment[]>([])
+  // Clicked answers are held as removable pills rather than injected into the
+  // textarea. Five answers pasted into one sentence read ambiguously, and raw
+  // text cannot be un-clicked without editing by hand.
+  const [staged, setStaged] = useState<StagedAnswer[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // Seeded with the nonce present at mount so a stale selection is not
   // replayed into a freshly keyed composer when the conversation changes.
   const lastStagedNonce = useRef(stagedOption?.nonce ?? 0)
-  const isEmpty = content.trim().length === 0 && attachments.length === 0
+  const isEmpty =
+    content.trim().length === 0 && attachments.length === 0 && staged.length === 0
+
+  useEffect(() => {
+    if (!onStagedChange) {
+      return
+    }
+    const map: Record<string, string> = {}
+    for (const answer of staged) {
+      if (answer.label) {
+        map[answer.label.toLowerCase()] = answer.value
+      }
+    }
+    onStagedChange(map)
+  }, [staged, onStagedChange])
+
+  const composeMessage = () => {
+    const answered = staged
+      .map((answer) => (answer.label ? `${answer.label}: ${answer.value}` : answer.value))
+      .join('\n')
+    const typed = content.trim()
+
+    if (answered && typed) {
+      return `${answered}\n${typed}`
+    }
+    return answered || typed
+  }
 
   const submit = () => {
     if (pending || isEmpty) {
       return
     }
 
-    const text =
-      content.trim().length > 0
-        ? content
-        : 'Please review the attached file(s).'
+    const composed = composeMessage()
+    const text = composed.length > 0 ? composed : 'Please review the attached file(s).'
     onSend(text, attachments)
     setContent('')
     setAttachments([])
+    setStaged([])
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -57,27 +100,42 @@ function Composer({ onSend, pending, patientName, stagedOption }: ComposerProps)
     )
   }
 
-  // A clicked chip is staged into the box rather than sent, so a qualifier can
-  // be added before sending and a misclick stays recoverable.
+  // Clicking a chip stages an answer instead of sending it, so a misclick is
+  // recoverable and several questions can be answered in one message.
   useEffect(() => {
     if (!stagedOption || stagedOption.nonce === lastStagedNonce.current) {
       return
     }
     lastStagedNonce.current = stagedOption.nonce
+    const { label, value } = stagedOption
 
-    setContent((current) => {
-      if (current.length === 0) {
-        return stagedOption.text
+    setStaged((current) => {
+      // Changing your mind on the same field replaces the answer rather than
+      // adding a second one, so the lab never sees two values for one field.
+      if (label) {
+        const existing = current.findIndex(
+          (answer) => answer.label?.toLowerCase() === label.toLowerCase(),
+        )
+        if (existing >= 0) {
+          if (current[existing].value === value) {
+            return current.filter((_, i) => i !== existing)
+          }
+          const next = [...current]
+          next[existing] = { label, value }
+          return next
+        }
+        return [...current, { label, value }]
       }
-      // Respect a trailing space the practitioner typed deliberately; comma
-      // otherwise, so consecutive chips read as "Extrinsic, Varus".
-      return /\s$/.test(current)
-        ? `${current}${stagedOption.text}`
-        : `${current}, ${stagedOption.text}`
-    })
 
-    textareaRef.current?.focus()
+      return current.some((answer) => !answer.label && answer.value === value)
+        ? current
+        : [...current, { value }]
+    })
   }, [stagedOption])
+
+  const removeStaged = (index: number) => {
+    setStaged((current) => current.filter((_, i) => i !== index))
+  }
 
   const removeAttachment = (index: number) => {
     setAttachments((current) => current.filter((_, i) => i !== index))
@@ -89,6 +147,25 @@ function Composer({ onSend, pending, patientName, stagedOption }: ComposerProps)
         <div className="composer-patient" aria-label={`Consulting for ${patientName}`}>
           <span>Consulting for</span>
           <strong>{patientName}</strong>
+        </div>
+      )}
+      {staged.length > 0 && (
+        <div className="staged-answers" aria-label="Answers ready to send">
+          {staged.map((answer, index) => (
+            <span className="staged-answer" key={`${answer.label ?? ''}-${answer.value}`}>
+              {answer.label && <span className="staged-answer-label">{answer.label}</span>}
+              <span className="staged-answer-value">{answer.value}</span>
+              <button
+                aria-label={`Remove ${answer.label ? `${answer.label} ` : ''}${answer.value}`}
+                className="staged-answer-x"
+                disabled={pending}
+                onClick={() => removeStaged(index)}
+                type="button"
+              >
+                ×
+              </button>
+            </span>
+          ))}
         </div>
       )}
       {attachments.length > 0 && (
@@ -140,7 +217,11 @@ function Composer({ onSend, pending, patientName, stagedOption }: ComposerProps)
           disabled={pending}
           onChange={(event) => setContent(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Enter consultation notes or a question"
+          placeholder={
+            staged.length > 0
+              ? 'Add degrees, millimetres or a note — or just send'
+              : 'Enter consultation notes or a question'
+          }
           ref={textareaRef}
           rows={3}
           value={content}

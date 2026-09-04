@@ -650,3 +650,114 @@ textarea:focus-visible {
   }
 }
 
+/* ---------------------------------------------------------------
+   Per-question options and staged answers — Ask LEOPA
+   Append to the end of src/styles.css.
+   Redefines .option-chips and .option-chip from the earlier block;
+   later rules win, so the old block can be left in place.
+   --------------------------------------------------------------- */
+
+.option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 7px 0 10px;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.option-chip {
+  border: 1px solid #b9c8c4;
+  border-radius: 999px;
+  padding: 5px 13px;
+  color: #1a4a43;
+  background: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.option-chip:hover {
+  border-color: #175a52;
+  background: #eef4f2;
+}
+
+/* A chosen chip stays visibly chosen; clicking it again un-answers it. */
+.option-chip.chosen {
+  border-color: #175a52;
+  color: #ffffff;
+  background: #175a52;
+}
+
+.option-chips-hint {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid #dfe7e4;
+  color: #7a8884;
+  font-size: 0.74rem;
+  font-style: italic;
+}
+
+/* Answers waiting to be sent. Removable, so a misclick costs one click to
+   undo rather than editing raw text out of the message box. */
+.staged-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px 0;
+}
+
+.staged-answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #cfe0da;
+  border-radius: 999px;
+  padding: 4px 6px 4px 11px;
+  background: #eaf3f0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.staged-answer-label {
+  color: #6e7c78;
+}
+
+.staged-answer-label::after {
+  content: ':';
+}
+
+.staged-answer-value {
+  color: #123b35;
+  font-weight: 700;
+}
+
+.staged-answer-x {
+  display: flex;
+  width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  color: #5b6b83;
+  background: rgb(255 255 255 / 70%);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.staged-answer-x:hover:not(:disabled) {
+  color: #ffffff;
+  background: #c0392b;
+}
+
+.staged-answer-x:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+

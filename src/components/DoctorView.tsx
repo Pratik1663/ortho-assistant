@@ -15,7 +15,7 @@ import CaptureView from './CaptureView'
 import Composer, { type StagedOption } from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
-import MessageList from './MessageList'
+import MessageList, { type OptionSelection } from './MessageList'
 import TemplateManager from './TemplateManager'
 import SoapReview from './SoapReview'
 import './DoctorView.css'
@@ -159,9 +159,14 @@ export default function DoctorView({
   // recoverable. Only one composer is on screen at a time, so a single piece
   // of state serves both the quick Q&A and consultation panels.
   const [stagedOption, setStagedOption] = useState<StagedOption | null>(null)
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
 
-  const handleSelectOption = (value: string) => {
-    setStagedOption({ text: value, nonce: Date.now() })
+  const handleSelectOption = (selection: OptionSelection) => {
+    setStagedOption({
+      label: selection.label,
+      value: selection.value,
+      nonce: Date.now(),
+    })
   }
 
   // The warning names what is actually at risk. Clearing a visit that has
@@ -387,8 +392,14 @@ export default function DoctorView({
                 messages={quickMessages}
                 onSelectOption={handleSelectOption}
                 pending={pendingAction === 'chat'}
+                selectedOptions={selectedOptions}
               />
-              <Composer onSend={onSend} pending={pending} stagedOption={stagedOption} />
+              <Composer
+                onSend={onSend}
+                onStagedChange={setSelectedOptions}
+                pending={pending}
+                stagedOption={stagedOption}
+              />
             </div>
           </div>
         ) : !currentPatient || !currentConversation ? (
@@ -511,6 +522,7 @@ export default function DoctorView({
                     messages={currentConversation.messages}
                     onSelectOption={handleSelectOption}
                     pending={pendingAction === 'chat'}
+                    selectedOptions={selectedOptions}
                   />
                   <div className="charting-footer">
                     {(currentConversation.messages.length > 0 ||
@@ -549,6 +561,7 @@ export default function DoctorView({
                     <Composer
                       key={`${currentPatient.id}-${currentConversation.id}`}
                       onSend={onSend}
+                      onStagedChange={setSelectedOptions}
                       patientName={currentPatient.name}
                       pending={pending}
                       stagedOption={stagedOption}

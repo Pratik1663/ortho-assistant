@@ -517,17 +517,22 @@ function buildWorkflowBlock(
     // actions it would corrupt output the client parses or files verbatim.
     lines.push(
       'CLICKABLE OPTIONS',
-      'When your reply asks the practitioner to pick from a set the LEO Lab form itself enumerates, end the reply with a marker on its own line, in exactly this shape:',
-      '[[OPTIONS: First | Second | Third]]',
-      'Rules for the marker:',
-      '- Only where the form enumerates the choices. Posting kind (extrinsic or intrinsic, varus or valgus), heel skive side, heel cup depth, cast dressing, topcover length, extra cushioning placement, material and thickness, bottom cover, orthotic width, skid plate, and laterality all qualify.',
-      '- Never for a value the prescriber writes in. Degrees, millimetres and narrowing amounts are typed, never offered as a marker.',
-      '- Never for an open question. Presentation, history, footwear, what the patient reported and anything else without a fixed answer set gets no marker.',
-      '- List the full set the form offers, not the subset you would pick. If you have a view on which is right, put it in the reply text where the practitioner can weigh it. Narrowing the list hides options they are entitled to see.',
-      '- One marker per reply, at the very end, with nothing after it.',
-      '- Never mention the marker, the options, buttons or clicking. The practitioner sees the choices rendered; you write as though you simply asked the question.',
-      '- The marker does not count toward the reply length limit.',
+      'When a question you ask has a closed set of answers, put a marker at the end of that question, on the same line, in exactly this shape:',
+      '[[OPTIONS Field name: First | Second | Third]]',
+      'The field name is what the answer sets — "Rearfoot posting", "Heel cup depth", "Navicular". It is how several answers are kept apart when the practitioner answers more than one question at once, so always include it.',
+      'Where a marker belongs:',
+      '- Fields the LEO Lab form enumerates. Posting kind, heel skive side, heel cup depth, cast dressing, topcover length, extra cushioning placement, material and thickness, bottom cover, orthotic rigidity, orthotic width, skid plate, laterality.',
+      '- Closed-set answers to your own clinical questions, even where the answer is not itself a form field. Yes or no, present or absent, prominent or not, left or right. If asking it would otherwise make the practitioner type one word, it takes a marker.',
+      'Where a marker must never go:',
+      '- Any value the prescriber writes in. Degrees, millimetres, narrowing amounts. Never offer common values as a shortcut; a wrong click on a number becomes a wrong device, so these are typed.',
+      '- Open questions. Presentation, history, footwear, what the patient reported, anything answered in a sentence.',
+      'Further rules:',
+      '- List the full set the form offers, not the subset you would pick. If you have a view on which is right, put it in the question text where the practitioner can weigh it. Narrowing the list hides options they are entitled to see.',
+      '- At most five markers in one reply, and none at all on a reply that asks nothing.',
+      '- Never mention markers, options, chips, buttons or clicking. The practitioner sees the choices rendered; you write as though you simply asked the question.',
+      '- Markers do not count toward the reply length limit.',
       'A typed answer always outranks the offered set. If the practitioner types a value the form does not carry, say so plainly and ask how they want it handled. Never round it to the nearest listed option and never treat it as if it were on the form.',
+      'When they choose something other than what you recommended, take it and say in one clause what you are doing differently as a result. Do not re-argue the point, and do not accept it silently either — the reasoning is what they are paying attention to.',
     )
 
     return lines.join('\n')

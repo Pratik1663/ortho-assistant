@@ -1,7 +1,8 @@
 /**
  * Canonical option sets transcribed from the LEO Lab prescription form
- * (knowledge_base.md Section F). These are the single source of truth for
- * clickable options in the Ask LEOPA conversation.
+ * (knowledge_base.md Section F), plus closed-set answers to LEOPA's own
+ * clinical questions. These are the single source of truth for clickable
+ * options in the Ask LEOPA conversation.
  *
  * WHY THIS FILE EXISTS
  * Two identical requests once returned different heel cup depth lists —
@@ -11,8 +12,10 @@
  * from whatever the model emits means a truncated marker still shows the
  * full set of options the form actually offers.
  *
- * Only enumerated fields belong here. Anything the prescriber writes in —
- * degrees, millimetres, narrowing amounts — is typed, never chipped.
+ * Only enumerated sets belong here. Anything the prescriber writes in —
+ * degrees, millimetres, narrowing amounts — is typed, never chipped. A wrong
+ * click on a number becomes a wrong device, and typing "4" is not friction
+ * worth removing.
  */
 
 export const FORM_OPTION_SETS: string[][] = [
@@ -34,19 +37,39 @@ export const FORM_OPTION_SETS: string[][] = [
   ['1/16"', '1/8"'],
   // F.7 — Bottom cover.
   ['Vinyl', 'J-Suede', 'Cordura', 'Puff', 'Nyplex'],
+  // F.9 — Rigidity grades.
+  ['Flexible', 'Semi-Flexible', 'Semi-Rigid', 'Rigid'],
   // F.3 — Orthotic width. Narrow takes a prescriber-supplied value.
   ['Regular', 'Wide', 'Narrow'],
-  // F.8 — Skid plate.
+  // F.8 — Skid plate, and any other yes/no question LEOPA asks.
   ['Yes', 'No'],
+  // Closed-set answers to clinical questions that decide a form field.
+  ['Present', 'Absent'],
+  ['Prominent', 'Not prominent'],
+  ['Tender', 'Not tender'],
   // Laterality, used across the form.
   ['Left', 'Right', 'Bilateral'],
 ]
 
-/** Most chips we will ever render under one message. */
-const MAX_OPTIONS = 8
+/** Most chips in one group. Longer sets are the form's, not ours to trim. */
+const MAX_OPTIONS_PER_GROUP = 8
 
-/** Complete marker: [[OPTIONS: Extrinsic | Intrinsic]] */
-const MARKER = /\[\[OPTIONS:\s*([^\]]*)\]\]/i
+/**
+ * Most chip groups in one reply. A reply asking five questions could otherwise
+ * put twenty-odd buttons on screen, which is worse than typing rather than
+ * better. Groups beyond this are dropped and the question is answered by
+ * typing, which always works.
+ */
+const MAX_GROUPS = 5
+
+/**
+ * Marker, optionally labelled with the field it answers:
+ *   [[OPTIONS: Extrinsic | Intrinsic]]
+ *   [[OPTIONS Heel cup depth: 9mm | 12mm | 14mm]]
+ * The label is what makes several answers stageable at once without them
+ * running together into something ambiguous.
+ */
+const MARKER = /\[\[OPTIONS(?:[ \t]+([^:\]]+?))?[ \t]*:[ \t]*([^\]]*)\]\]/g
 
 /**
  * A marker that has started but not finished arriving. While a reply streams
@@ -55,13 +78,12 @@ const MARKER = /\[\[OPTIONS:\s*([^\]]*)\]\]/i
  */
 const PARTIAL_MARKER = /\s*\[\[[^\]]*$/
 
-const normalise = (value: string) =>
-  value.toLowerCase().replace(/[\s"'·]/g, '')
+const normalise = (value: string) => value.toLowerCase().replace(/[\s"'·]/g, '')
 
 /**
- * If every value the model emitted belongs to one known form set, return that
- * whole set. This repairs truncation without discarding sets we do not know
- * about — an unrecognised list is passed through untouched.
+ * If every value the model emitted belongs to one known set, return that whole
+ * set. This repairs truncation without discarding sets we do not know about —
+ * an unrecognised list is passed through untouched.
  *
  * Requires at least two values, because a single value like "Full Length"
  * appears in more than one set and cannot be resolved unambiguously.
@@ -80,32 +102,9 @@ function expandToCanonicalSet(values: string[]): string[] {
   return match ?? values
 }
 
-export interface ParsedAssistantMessage {
-  /** Message text with the marker removed, safe to display. */
-  text: string
-  /** Clickable options, empty when the message carried no marker. */
-  options: string[]
-}
-
-/**
- * Split an assistant message into displayable text and its clickable options.
- * Safe to call on every message on every render; messages without a marker
- * come back with their text unchanged and no options.
- */
-export function parseAssistantMessage(
-  content: string,
-): ParsedAssistantMessage {
-  const match = content.match(MARKER)
-
-  if (!match) {
-    return {
-      text: content.replace(PARTIAL_MARKER, ''),
-      options: [],
-    }
-  }
-
+function cleanValues(raw: string): string[] {
   const seen = new Set<string>()
-  const values = match[1]
+  const values = raw
     .split('|')
     .map((value) => value.trim())
     .filter((value) => {
@@ -116,8 +115,68 @@ export function parseAssistantMessage(
       return true
     })
 
-  return {
-    text: content.replace(MARKER, '').trimEnd(),
-    options: expandToCanonicalSet(values).slice(0, MAX_OPTIONS),
+  return expandToCanonicalSet(values).slice(0, MAX_OPTIONS_PER_GROUP)
+}
+
+/**
+ * One run of message text, with the options that belong to the question that
+ * run ends on. Rendering these in order puts each set of chips directly under
+ * its own question rather than in one pile at the bottom of the reply.
+ */
+export interface MessageSegment {
+  text: string
+  /** Which field these options answer, when the marker named one. */
+  label?: string
+  options: string[]
+}
+
+/**
+ * Split an assistant message into displayable runs of text and their options.
+ * Safe to call on every message on every render; a message without markers
+ * comes back as a single segment with its text unchanged and no options.
+ */
+export function parseAssistantMessage(content: string): MessageSegment[] {
+  const segments: MessageSegment[] = []
+  let cursor = 0
+  let groups = 0
+
+  MARKER.lastIndex = 0
+  let match = MARKER.exec(content)
+
+  while (match) {
+    const options = groups < MAX_GROUPS ? cleanValues(match[2]) : []
+    const text = content.slice(cursor, match.index).replace(/[ \t]+$/, '')
+
+    if (options.length > 0) {
+      groups += 1
+      segments.push({
+        text,
+        label: match[1]?.trim() || undefined,
+        options,
+      })
+    } else if (text.length > 0) {
+      // A marker we could not use still gets stripped; its text is kept and
+      // merged with whatever follows so no gap is left in the reply.
+      segments.push({ text, options: [] })
+    }
+
+    cursor = match.index + match[0].length
+    match = MARKER.exec(content)
   }
+
+  const tail = content.slice(cursor).replace(PARTIAL_MARKER, '')
+
+  if (tail.length > 0 || segments.length === 0) {
+    segments.push({ text: segments.length === 0 ? tail : tail, options: [] })
+  }
+
+  // Trim only the outer edges, so blank lines inside the reply survive.
+  if (segments.length > 0) {
+    segments[segments.length - 1].text = segments[segments.length - 1].text.replace(
+      /\s+$/,
+      '',
+    )
+  }
+
+  return segments
 }
