@@ -888,3 +888,26 @@ textarea:focus-visible {
   }
 }
 
+/* ---------------------------------------------------------------
+   Tighter option spacing — Ask LEOPA
+   Append to the end of src/styles.css
+
+   A thirteen-item additions pass was taking four lines of vertical space
+   per item. Pulling the chip up under its own line roughly halves the
+   scroll without crowding anything.
+   --------------------------------------------------------------- */
+
+.option-chips {
+  margin: 4px 0 2px;
+}
+
+.option-group-label {
+  margin: 8px 0 -4px;
+}
+
+/* Blank lines between items come from the reply text itself, so the run of
+   items is tightened here rather than in the prompt. */
+.message-bubble .option-chips + br {
+  display: none;
+}
+
