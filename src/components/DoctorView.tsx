@@ -12,7 +12,7 @@ import type {
 } from '../App'
 import type { Doctor } from './DoctorManagement'
 import CaptureView from './CaptureView'
-import Composer from './Composer'
+import Composer, { type StagedOption } from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
 import MessageList from './MessageList'
@@ -153,6 +153,16 @@ export default function DoctorView({
     : []
 
   const [showTemplates, setShowTemplates] = useState(false)
+
+  // Clicking an option chip stages the value into the composer instead of
+  // sending it, so a qualifier can be added first and a misclick is
+  // recoverable. Only one composer is on screen at a time, so a single piece
+  // of state serves both the quick Q&A and consultation panels.
+  const [stagedOption, setStagedOption] = useState<StagedOption | null>(null)
+
+  const handleSelectOption = (value: string) => {
+    setStagedOption({ text: value, nonce: Date.now() })
+  }
 
   // The warning names what is actually at risk. Clearing a visit that has
   // approved clinical work is a heavier action than clearing a chat thread,
@@ -373,8 +383,12 @@ export default function DoctorView({
               )}
             </div>
             <div className="chat-container">
-              <MessageList messages={quickMessages} pending={pendingAction === 'chat'} />
-              <Composer onSend={onSend} pending={pending} />
+              <MessageList
+                messages={quickMessages}
+                onSelectOption={handleSelectOption}
+                pending={pendingAction === 'chat'}
+              />
+              <Composer onSend={onSend} pending={pending} stagedOption={stagedOption} />
             </div>
           </div>
         ) : !currentPatient || !currentConversation ? (
@@ -495,6 +509,7 @@ export default function DoctorView({
                 <div className="charting-workspace">
                   <MessageList
                     messages={currentConversation.messages}
+                    onSelectOption={handleSelectOption}
                     pending={pendingAction === 'chat'}
                   />
                   <div className="charting-footer">
@@ -536,6 +551,7 @@ export default function DoctorView({
                       onSend={onSend}
                       patientName={currentPatient.name}
                       pending={pending}
+                      stagedOption={stagedOption}
                     />
                     <p className="workflow-disclaimer">
                       AI supports documentation and fabrication decisions; practitioner approval is required.

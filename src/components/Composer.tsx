@@ -1,18 +1,33 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { OutgoingAttachment } from '../App'
 import FileUploadButton from './FileUploadButton'
 import MicrophoneRecorder from './MicrophoneRecorder'
+
+/**
+ * A form option chosen by clicking a chip. The nonce changes on every click so
+ * the same value can be staged twice in a row; the text alone would not
+ * re-trigger the effect.
+ */
+export interface StagedOption {
+  text: string
+  nonce: number
+}
 
 interface ComposerProps {
   onSend: (content: string, attachments: OutgoingAttachment[]) => void
   pending: boolean
   patientName?: string
+  stagedOption?: StagedOption | null
 }
 
-function Composer({ onSend, pending, patientName }: ComposerProps) {
+function Composer({ onSend, pending, patientName, stagedOption }: ComposerProps) {
   const [content, setContent] = useState('')
   const [interim, setInterim] = useState('')
   const [attachments, setAttachments] = useState<OutgoingAttachment[]>([])
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Seeded with the nonce present at mount so a stale selection is not
+  // replayed into a freshly keyed composer when the conversation changes.
+  const lastStagedNonce = useRef(stagedOption?.nonce ?? 0)
   const isEmpty = content.trim().length === 0 && attachments.length === 0
 
   const submit = () => {
@@ -41,6 +56,28 @@ function Composer({ onSend, pending, patientName }: ComposerProps) {
       current.trim().length > 0 ? `${current.trimEnd()} ${text}` : text,
     )
   }
+
+  // A clicked chip is staged into the box rather than sent, so a qualifier can
+  // be added before sending and a misclick stays recoverable.
+  useEffect(() => {
+    if (!stagedOption || stagedOption.nonce === lastStagedNonce.current) {
+      return
+    }
+    lastStagedNonce.current = stagedOption.nonce
+
+    setContent((current) => {
+      if (current.length === 0) {
+        return stagedOption.text
+      }
+      // Respect a trailing space the practitioner typed deliberately; comma
+      // otherwise, so consecutive chips read as "Extrinsic, Varus".
+      return /\s$/.test(current)
+        ? `${current}${stagedOption.text}`
+        : `${current}, ${stagedOption.text}`
+    })
+
+    textareaRef.current?.focus()
+  }, [stagedOption])
 
   const removeAttachment = (index: number) => {
     setAttachments((current) => current.filter((_, i) => i !== index))
@@ -104,6 +141,7 @@ function Composer({ onSend, pending, patientName }: ComposerProps) {
           onChange={(event) => setContent(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Enter consultation notes or a question"
+          ref={textareaRef}
           rows={3}
           value={content}
         />

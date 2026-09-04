@@ -595,3 +595,58 @@ textarea:focus-visible {
   opacity: 0.5;
   cursor: default;
 }
+/* ---------------------------------------------------------------
+   Clickable form options in Ask LEOPA
+   Append to the end of src/styles.css
+   --------------------------------------------------------------- */
+
+.option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid #dfe7e4;
+}
+
+.option-chip {
+  border: 1px solid #b9c8c4;
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: #1a4a43;
+  background: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.option-chip:hover {
+  border-color: #175a52;
+  background: #eef4f2;
+}
+
+.option-chip:active {
+  background: #e0eae7;
+}
+
+/* The hint is the whole point of the design: chips are a shortcut, never a
+   forced choice, and a typed value is authoritative even when it is not on
+   the form. */
+.option-chips-hint {
+  flex-basis: 100%;
+  margin-top: 2px;
+  color: #7a8884;
+  font-size: 0.74rem;
+  font-style: italic;
+}
+
+@media (max-width: 560px) {
+  .option-chip {
+    padding: 7px 13px;
+    font-size: 0.86rem;
+  }
+}
+

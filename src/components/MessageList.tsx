@@ -1,12 +1,19 @@
 import { useEffect, useRef } from 'react'
 import type { Message } from '../App'
+import { parseAssistantMessage } from '../formOptions'
 
 interface MessageListProps {
   messages: Message[]
   pending: boolean
+  /**
+   * Called when a clickable option is chosen. The value is staged into the
+   * composer rather than sent, so the practitioner can add a qualifier first.
+   * When omitted, chips are not rendered at all.
+   */
+  onSelectOption?: (value: string) => void
 }
 
-function MessageList({ messages, pending }: MessageListProps) {
+function MessageList({ messages, pending, onSelectOption }: MessageListProps) {
   const newestMessageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -31,6 +38,24 @@ function MessageList({ messages, pending }: MessageListProps) {
       {visibleMessages.map((message, index) => {
         const isLive =
           isStreaming && !awaitingFirstToken && index === visibleMessages.length - 1
+        const isLast = index === visibleMessages.length - 1
+
+        // Assistant replies may carry an options marker. Strip it from the
+        // text either way; only the newest settled reply gets chips, so an
+        // older message's options cannot be clicked out of context.
+        const parsed =
+          message.role === 'assistant'
+            ? parseAssistantMessage(message.content)
+            : { text: message.content, options: [] as string[] }
+
+        const showOptions =
+          Boolean(onSelectOption) &&
+          message.role === 'assistant' &&
+          isLast &&
+          !isLive &&
+          !pending &&
+          parsed.options.length > 0
+
         return (
           <div className={`message-row ${message.role}`} key={index}>
             <div className={`message-bubble${isLive ? ' streaming' : ''}`}>
@@ -46,8 +71,25 @@ function MessageList({ messages, pending }: MessageListProps) {
                   ))}
                 </div>
               )}
-              {message.content}
+              {parsed.text}
               {isLive && <span className="stream-caret" aria-hidden="true" />}
+              {showOptions && (
+                <div className="option-chips" role="group" aria-label="Form options">
+                  {parsed.options.map((option) => (
+                    <button
+                      className="option-chip"
+                      key={option}
+                      onClick={() => onSelectOption?.(option)}
+                      type="button"
+                    >
+                      {option}
+                    </button>
+                  ))}
+                  <span className="option-chips-hint">
+                    or type your own — a typed value always wins
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )

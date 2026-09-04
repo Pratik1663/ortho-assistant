@@ -236,3 +236,12 @@
 .mic-btn.recording {
   border-color: var(--leo-red);
 }
+/* ---------- Option chips in brand red on hover ---------- */
+/* Append to the end of src/leo-theme.css so it wins over styles.css */
+
+.option-chip:hover {
+  border-color: var(--leo-red);
+  background: rgb(210 31 47 / 6%);
+  color: var(--leo-red-dark);
+}
+
