@@ -12,7 +12,12 @@ export interface StagedOption {
   label?: string
   value: string
   nonce: number
+  /** Set when the reply asked one thing, so the answer can send itself. */
+  autoSend?: boolean
 }
+
+/** How long the practitioner has to call back an auto-sent answer. */
+const AUTO_SEND_DELAY_MS = 1200
 
 interface StagedAnswer {
   label?: string
@@ -42,6 +47,9 @@ function Composer({
   // textarea. Five answers pasted into one sentence read ambiguously, and raw
   // text cannot be un-clicked without editing by hand.
   const [staged, setStaged] = useState<StagedAnswer[]>([])
+  // Holds the answer that is about to send itself, so the strip can name it
+  // and the practitioner can stop it.
+  const [autoSending, setAutoSending] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // Seeded with the nonce present at mount so a stale selection is not
   // replayed into a freshly keyed composer when the conversation changes.
@@ -81,6 +89,7 @@ function Composer({
 
     const composed = composeMessage()
     const text = composed.length > 0 ? composed : 'Please review the attached file(s).'
+    setAutoSending(null)
     onSend(text, attachments)
     setContent('')
     setAttachments([])
@@ -109,6 +118,15 @@ function Composer({
     lastStagedNonce.current = stagedOption.nonce
     const { label, value } = stagedOption
 
+    // Clicking a second answer means they are still working, so an armed
+    // send is called off rather than racing them.
+    setAutoSending((current) => {
+      if (current !== null) {
+        return null
+      }
+      return stagedOption.autoSend && content.trim().length === 0 ? value : null
+    })
+
     setStaged((current) => {
       // Changing your mind on the same field replaces the answer rather than
       // adding a second one, so the lab never sees two values for one field.
@@ -135,7 +153,36 @@ function Composer({
 
   const removeStaged = (index: number) => {
     setStaged((current) => current.filter((_, i) => i !== index))
+    setAutoSending(null)
   }
+
+  // The countdown lives here rather than in the click handler so that any
+  // re-render which cancels it also clears the timer.
+  useEffect(() => {
+    if (autoSending === null || pending) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      submit()
+    }, AUTO_SEND_DELAY_MS)
+    return () => window.clearTimeout(timer)
+    // submit is intentionally not a dependency; re-arming on every keystroke
+    // would restart the countdown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSending, pending, staged])
+
+  useEffect(() => {
+    if (autoSending === null) {
+      return
+    }
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAutoSending(null)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [autoSending])
 
   const removeAttachment = (index: number) => {
     setAttachments((current) => current.filter((_, i) => i !== index))
@@ -197,7 +244,20 @@ function Composer({
           ))}
         </div>
       )}
-      <div className="composer">
+      {autoSending !== null ? (
+        <button
+          className="auto-send-strip"
+          onClick={() => setAutoSending(null)}
+          type="button"
+        >
+          <span className="auto-send-text">
+            Sending <strong>{autoSending}</strong>
+          </span>
+          <span className="auto-send-cancel">Cancel</span>
+          <span className="auto-send-bar" aria-hidden="true" />
+        </button>
+      ) : (
+        <div className="composer">
         <div className="composer-tools">
           <FileUploadButton
             attachmentCount={attachments.length}
@@ -229,7 +289,8 @@ function Composer({
         <button disabled={pending || isEmpty} onClick={submit} type="button">
           Send
         </button>
-      </div>
+        </div>
+      )}
       {interim && (
         <div aria-live="polite" className="dictation-preview">
           🎤 {interim}…

@@ -6,6 +6,12 @@ export interface OptionSelection {
   /** Which field this answers, when the marker named one. */
   label?: string
   value: string
+  /**
+   * True when this reply asked exactly one thing, so answering it can send
+   * straight away. With several questions on screen the practitioner is still
+   * mid-answer, and sending on the first click would cut them off.
+   */
+  autoSend?: boolean
 }
 
 interface MessageListProps {
@@ -126,11 +132,13 @@ function MessageList({
           !isLive &&
           !pending
 
-        const hasAnyControls =
-          controlsAllowed &&
-          segments.some(
-            (segment) => segment.options.length > 0 || Boolean(segment.input),
-          )
+        const controlCount = segments.filter(
+          (segment) => segment.options.length > 0 || Boolean(segment.input),
+        ).length
+        const hasAnyControls = controlsAllowed && controlCount > 0
+        // Counted rather than guessed: one question means one answer, so it
+        // can go the moment it is given.
+        const autoSend = controlCount === 1
 
         return (
           <div className={`message-row ${message.role}`} key={index}>
@@ -175,7 +183,7 @@ function MessageList({
                         key={`${index}-${segment.label}`}
                         label={segment.label}
                         onCommit={(value) =>
-                          onSelectOption?.({ label: segment.label, value })
+                          onSelectOption?.({ autoSend, label: segment.label, value })
                         }
                         staged={chosen}
                         unit={segment.input?.unit}
@@ -192,7 +200,11 @@ function MessageList({
                             className={`option-chip${chosen === option ? ' chosen' : ''}`}
                             key={option}
                             onClick={() =>
-                              onSelectOption?.({ label: segment.label, value: option })
+                              onSelectOption?.({
+                                autoSend,
+                                label: segment.label,
+                                value: option,
+                              })
                             }
                             type="button"
                           >
@@ -207,7 +219,9 @@ function MessageList({
               {isLive && <span className="stream-caret" aria-hidden="true" />}
               {hasAnyControls && (
                 <div className="option-chips-hint">
-                  Answer here or in the message box — a typed value always wins.
+                  {autoSend
+                    ? 'Answering sends straight away — or type in the message box instead.'
+                    : 'Answer here or in the message box — a typed value always wins.'}
                 </div>
               )}
             </div>

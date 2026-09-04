@@ -163,6 +163,7 @@ export default function DoctorView({
 
   const handleSelectOption = (selection: OptionSelection) => {
     setStagedOption({
+      autoSend: selection.autoSend,
       label: selection.label,
       value: selection.value,
       nonce: Date.now(),
