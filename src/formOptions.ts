@@ -37,6 +37,24 @@ export const FORM_OPTION_SETS: string[][] = [
   ['1/16"', '1/8"'],
   // F.7 — Bottom cover.
   ['Vinyl', 'J-Suede', 'Cordura', 'Puff', 'Nyplex'],
+  // F.0 — Orthotic style. A starting point, never a constraint.
+  [
+    'Build your own',
+    'Standard',
+    'Casual',
+    'Sport Performance',
+    'Sport Comfort',
+    'Dress',
+    'Diabetic',
+    'UCBL',
+    'EVA',
+    'Gait Plate',
+  ],
+  // F.0 — Style colour choices.
+  ['Blue', 'Black'],
+  ['Tan', 'Black'],
+  // F.0 — Gait Plate direction, ticked per side.
+  ['Induce in-toeing', 'Induce out-toeing'],
   // F.9 — Rigidity. Family and level are named together, so both are sets.
   ['Poly', '3DP', 'Premium'],
   ['Flexible', 'Semi-Flexible', 'Semi-Rigid', 'Rigid'],

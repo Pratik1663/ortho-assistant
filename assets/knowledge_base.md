@@ -242,6 +242,47 @@ both sides; if only one side is given, ask about the other.
 
 ---
 
+### F.0 — ORTHOTIC STYLE
+
+The first choice on the form. A style is a **starting point, not a package** —
+everything it brings can be changed, removed or overridden. The practitioner
+either designs the device field by field, or picks a style to begin from a
+filled position and adjusts from there.
+
+| Style | Shell | Topcover | Underlay | Also includes | Colour choice |
+|---|---|---|---|---|---|
+| Standard | Poly Pro | prescriber selects | prescriber selects | — | — |
+| Casual | Poly Pro | Vinyl 1/8" | Vinyl | — | — |
+| Sport Performance | Poly Pro | ETC 1/8" | Vinyl | Heel post | Blue / Black |
+| Sport Comfort | Poly Pro | ETC 1/8" | Vinyl | Arch fill | Blue / Black |
+| Dress | Poly Pro | Suede 1/16" | Vinyl | Slim option | — |
+| Diabetic | Poly Pro | Plastazote 1/8" | Vinyl | — | Tan / Black |
+| UCBL | Poly Pro | Black Microcell 1/8" | Vinyl | — | — |
+| EVA | 35 DUR EVA | ETC 1/8" | Vinyl | Dual/tri density on request, premium charge | — |
+| Gait Plate | Poly Pro | prescriber selects | prescriber selects | Induce in-toeing or out-toeing, per side | — |
+
+**Underlay is the bottom cover** (F.7). Every style lists vinyl because that is
+the style's default, not a restriction — any of the five bottom covers can
+replace it.
+
+**Poly Pro is likewise a default, not a constraint.** The rigidity section (F.9)
+offers Poly, 3DP and Premium, and a style's shell can be overridden like anything
+else.
+
+**The Sport Performance heel post is a neutral post** — a base to work from. If
+the prescriber wants an angle they give the degrees; if they want no post at all
+they say so. This is the one place a neutral post arrives without being asked for,
+which matters because zero degrees is a real orderable instruction (F.12).
+
+**How a style is used in conversation.** Present what the style brings, field by
+field, for confirmation. Never apply it silently — a default that arrives
+unremarked is a decision nobody made. Then walk the fields the style does not
+cover.
+
+**Gait Plate** takes in-toeing or out-toeing, ticked per side.
+
+---
+
 ### F.13 — FIELDS NOT YET TRANSCRIBED
 
 The following pages of the form have not been supplied and are therefore **not part
@@ -249,8 +290,6 @@ of the menu yet**. The AI must not name options from them until they are filled 
 here.
 
 - Patient details
-- Device style — this is presumably where UCBL and Gait Plate (Section 7) are
-  ordered. **[LAB INPUT]**
 - Orthotic length
 - Additional Instructions — the free-text field. Several synonym-map entries in
   Section 8 route custom requests here. **[LAB INPUT]** confirm what the lab accepts.
