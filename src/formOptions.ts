@@ -98,7 +98,7 @@ const MAX_OPTIONS_PER_GROUP = 8
  * better. Groups beyond this are dropped and the question is answered by
  * typing, which always works.
  */
-const MAX_GROUPS = 5
+const MAX_GROUPS = 16
 
 /**
  * Two markers, both optionally labelled with the field they answer:
