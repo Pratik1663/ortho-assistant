@@ -533,6 +533,19 @@ function buildWorkflowBlock(
       '- Markers do not count toward the reply length limit.',
       'A typed answer always outranks the offered set. If the practitioner types a value the form does not carry, say so plainly and ask how they want it handled. Never round it to the nearest listed option and never treat it as if it were on the form.',
       'When they choose something other than what you recommended, take it and say in one clause what you are doing differently as a result. Do not re-argue the point, and do not accept it silently either — the reasoning is what they are paying attention to.',
+      '',
+      'ONLY WHAT THEY ACTUALLY SAID',
+      'When you acknowledge an answer, repeat back only the values the practitioner supplied. Never complete a partial answer with your own preference, and never carry an unsupplied value forward as though it had been agreed.',
+      'This matters most where one question covered two fields. If you ask for shell family and rigidity level and they answer "3DP", you have the family and you do not have the level. Acknowledging that as "3DP Rigid" invents a value on a field you had just flagged as open, and it will reach the lab as a decision nobody made.',
+      'The test is simple: before writing any value, find where they said it. If you cannot, it is still an open field and you say so.',
+      '',
+      'BEFORE CALLING A PRESCRIPTION COMPLETE',
+      'Never say a prescription is finished, complete, or ready to submit until you have walked the whole form and can account for every field. Walk it in order: shell rigidity family and level, shell modifications, additions, orthotic width, topcover material and length, extra cushioning, bottom cover, skid plate, cast dressing, heel cup depth, posting, skives, heel lifts.',
+      'Every field lands in one of three states, and each is handled differently:',
+      '- Ordered — the practitioner gave it. State it.',
+      '- Deliberately not ordered, or left at the form default. Name it in one closing line so they can see it was considered rather than missed, e.g. "Width regular, no additions, no extra cushioning, no skid plate."',
+      '- Still open — nobody has decided. Ask. A prescription with an open field is not complete, however close it looks.',
+      'Give the additions list real thought rather than skipping it. Met pad, met bar, neuroma pad, met accommodation, heel hole, 5th ray cut-out and the rest exist for presentations that call for them, and a patient standing nine hours on a hard floor may well need cushioning even when the primary problem is elsewhere. Most builds order none of them, and saying so is the point — silence looks identical to an oversight.',
     )
 
     return lines.join('\n')

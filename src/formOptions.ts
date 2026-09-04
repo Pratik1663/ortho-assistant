@@ -37,8 +37,46 @@ export const FORM_OPTION_SETS: string[][] = [
   ['1/16"', '1/8"'],
   // F.7 — Bottom cover.
   ['Vinyl', 'J-Suede', 'Cordura', 'Puff', 'Nyplex'],
-  // F.9 — Rigidity grades.
+  // F.9 — Rigidity. Family and level are named together, so both are sets.
+  ['Poly', '3DP', 'Premium'],
   ['Flexible', 'Semi-Flexible', 'Semi-Rigid', 'Rigid'],
+  ['2.3mm XT-Carbon', '2.6mm XT-Carbon', '1.5mm TL2100'],
+  // F.4 — Topcover. One cover for the device, from one of three families.
+  ['Vinyl', 'Foam', 'Fabric/Suede/Leather'],
+  [
+    'Black',
+    'Grey',
+    'Tan',
+    'Blue',
+    'Black Graphite',
+    'Silver Graphite',
+    'Flash Blue',
+    'Flash Orange',
+  ],
+  [
+    'Black',
+    'Grey Swirl',
+    'Pink Swirl',
+    'Blue Swirl',
+    'Pink/Purple',
+    'Blue/Green',
+    'Camo',
+    'Perforated Black',
+    'Pink Diabetic',
+    'Black Diabetic',
+  ],
+  [
+    'X-Static Poron 1/8" (Premium)',
+    'Bamboo 1/8"',
+    'ETC Black 1/16"',
+    'ETC Black 1/8"',
+    'ETC Blue 1/16"',
+    'ETC Blue 1/8"',
+    'Neoprene 1/16"',
+    'Neoprene 1/8"',
+    'Suede 1/16"',
+    'Leather (Premium)',
+  ],
   // F.3 — Orthotic width. Narrow takes a prescriber-supplied value.
   ['Regular', 'Wide', 'Narrow'],
   // F.8 — Skid plate, and any other yes/no question LEOPA asks.
@@ -115,7 +153,12 @@ function cleanValues(raw: string): string[] {
       return true
     })
 
-  return expandToCanonicalSet(values).slice(0, MAX_OPTIONS_PER_GROUP)
+  const expanded = expandToCanonicalSet(values)
+
+  // A recognised set is the form's own list and is never trimmed — silently
+  // dropping two foam colours would be the same failure as the truncated heel
+  // cup list. Only an unrecognised list, which we cannot vouch for, is capped.
+  return expanded === values ? expanded.slice(0, MAX_OPTIONS_PER_GROUP) : expanded
 }
 
 /**
