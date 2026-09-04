@@ -134,6 +134,12 @@ const MARKER =
   /\[\[(OPTIONS|INPUT)(?:[ \t]+([^:\]]+?))?[ \t]*:[ \t]*([^\]]*)\]\]/g
 
 /**
+ * The prescription state block, stripped here so it never shows as text. It is
+ * parsed separately by prescriptionState.ts and rendered as the panel.
+ */
+const RX_BLOCK = /\[\[RX\s*[\s\S]*?\]\]/g
+
+/**
  * A marker that has started but not finished arriving. While a reply streams
  * in, the closing brackets land last, so without this the raw marker text is
  * briefly visible in the bubble.
@@ -204,7 +210,8 @@ export interface MessageSegment {
  * Safe to call on every message on every render; a message without markers
  * comes back as a single segment with its text unchanged and no options.
  */
-export function parseAssistantMessage(content: string): MessageSegment[] {
+export function parseAssistantMessage(rawContent: string): MessageSegment[] {
+  const content = rawContent.replace(RX_BLOCK, '')
   const segments: MessageSegment[] = []
   let cursor = 0
   let groups = 0

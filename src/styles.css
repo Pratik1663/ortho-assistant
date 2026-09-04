@@ -911,3 +911,136 @@ textarea:focus-visible {
   display: none;
 }
 
+/* ---------------------------------------------------------------
+   Prescription panel — Ask LEOPA
+   Append to the end of src/styles.css
+
+   Two columns, left foot and right, because asymmetry is the error
+   hardest to catch in prose. A left column filling up on a foot
+   described as unremarkable is obvious here and nearly invisible
+   in a conversation.
+   --------------------------------------------------------------- */
+
+.rx-panel {
+  flex: 0 0 auto;
+  max-height: 42vh;
+  overflow-y: auto;
+  border-bottom: 1px solid #dfe7e4;
+  background: #fbfdfc;
+}
+
+.rx-panel.collapsed {
+  max-height: none;
+  overflow: visible;
+}
+
+.rx-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid #e8efec;
+  padding: 11px clamp(14px, 3vw, 24px);
+  background: #f2f7f5;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rx-panel-title {
+  color: #123b35;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.rx-panel-count {
+  flex: 1;
+  color: #7a8884;
+  font-size: 0.76rem;
+}
+
+.rx-panel-chevron {
+  color: #7a8884;
+  font-size: 0.7rem;
+}
+
+.rx-panel-body {
+  padding: 6px clamp(14px, 3vw, 24px) 14px;
+}
+
+.rx-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.1fr) 1fr 1fr;
+  gap: 10px;
+  align-items: baseline;
+  border-bottom: 1px solid #f0f4f2;
+  padding: 6px 0;
+}
+
+.rx-row:last-child {
+  border-bottom: 0;
+}
+
+.rx-head {
+  border-bottom: 1px solid #dfe7e4;
+  padding-bottom: 5px;
+}
+
+.rx-col-head {
+  color: #7a8884;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rx-label {
+  color: #4a5b57;
+  font-size: 0.79rem;
+}
+
+.rx-cell {
+  color: #123b35;
+  font-size: 0.81rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Decided against reads differently from decided — same weight would let a
+   "Not ordered" row pass for a filled one at a glance. */
+.rx-cell.none {
+  color: #9aa8a4;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* An untouched cell is left genuinely blank. Nothing to read means nothing
+   has been decided, which is exactly what should catch the eye. */
+.rx-cell.open {
+  display: block;
+  min-height: 1.1em;
+}
+
+.rx-row.pending .rx-label {
+  color: #8b9995;
+}
+
+@media (max-width: 560px) {
+  .rx-panel {
+    max-height: 34vh;
+  }
+
+  .rx-row {
+    grid-template-columns: minmax(88px, 1fr) 1fr 1fr;
+    gap: 7px;
+  }
+
+  .rx-label,
+  .rx-cell {
+    font-size: 0.75rem;
+  }
+}
+
