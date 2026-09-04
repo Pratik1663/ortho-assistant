@@ -16,8 +16,6 @@ import Composer, { type StagedOption } from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
 import MessageList, { type OptionSelection } from './MessageList'
-import PrescriptionPanel, { type FieldEdit } from './PrescriptionPanel'
-import { parsePrescriptionState } from '../prescriptionState'
 import TemplateManager from './TemplateManager'
 import SoapReview from './SoapReview'
 import './DoctorView.css'
@@ -162,34 +160,6 @@ export default function DoctorView({
   // of state serves both the quick Q&A and consultation panels.
   const [stagedOption, setStagedOption] = useState<StagedOption | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
-
-  // The newest reply that carried a prescription block wins. Walking backwards
-  // rather than reading the last message means a reply without one — a
-  // clarifying question, say — leaves the panel showing the last known build
-  // instead of blanking it.
-  const prescription = (() => {
-    const messages = currentConversation?.messages ?? []
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      if (messages[i].role !== 'assistant') {
-        continue
-      }
-      const parsed = parsePrescriptionState(messages[i].content)
-      if (parsed) {
-        return parsed
-      }
-    }
-    return null
-  })()
-
-  // A change made in the panel is sent as an ordinary message, so LEOPA sees it
-  // the same way as anything typed and the conversation stays the record.
-  const handleFieldEdit = (edit: FieldEdit) => {
-    const side = edit.side === 'R' ? ' on the right' : edit.side === 'L' ? ' on the left' : ''
-    const message = edit.value
-      ? `Change ${edit.label.toLowerCase()}${side} to ${edit.value}.`
-      : `I want to change ${edit.label.toLowerCase()}${side}.`
-    onSend(message, [])
-  }
 
   const handleSelectOption = (selection: OptionSelection) => {
     setStagedOption({
@@ -549,13 +519,6 @@ export default function DoctorView({
 
               {activeTab === 'consultation' && (
                 <div className="charting-workspace">
-                  {prescription && (
-                    <PrescriptionPanel
-                      disabled={pending}
-                      onEdit={handleFieldEdit}
-                      state={prescription}
-                    />
-                  )}
                   <MessageList
                     messages={currentConversation.messages}
                     onSelectOption={handleSelectOption}
