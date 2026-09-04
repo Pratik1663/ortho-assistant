@@ -18,6 +18,27 @@
  * worth removing.
  */
 
+/** Sets the prescription panel also needs, named so the two cannot drift. */
+export const STYLE_OPTIONS = [
+  'Build your own',
+  'Standard',
+  'Casual',
+  'Sport Performance',
+  'Sport Comfort',
+  'Dress',
+  'Diabetic',
+  'UCBL',
+  'EVA',
+  'Gait Plate',
+]
+export const RIGIDITY_LEVELS = ['Flexible', 'Semi-Flexible', 'Semi-Rigid', 'Rigid']
+export const WIDTH_OPTIONS = ['Regular', 'Wide', 'Narrow']
+export const CAST_DRESSING_OPTIONS = ['Tight to Arch', 'Minimum', 'Moderate', 'Maximum']
+export const HEEL_CUP_OPTIONS = ['9mm', '12mm', '14mm', '16mm', '18mm', '20mm']
+export const TOPCOVER_LENGTH_OPTIONS = ['Full Length', 'Sulcus', '3/4']
+export const BOTTOM_COVER_OPTIONS = ['Vinyl', 'J-Suede', 'Cordura', 'Puff', 'Nyplex']
+export const YES_NO_OPTIONS = ['Yes', 'No']
+
 export const FORM_OPTION_SETS: string[][] = [
   // F.12 — Posting: the kind is a closed set, the degrees are not.
   ['Extrinsic', 'Intrinsic'],
@@ -25,31 +46,20 @@ export const FORM_OPTION_SETS: string[][] = [
   // F.12 — Heel skive: side is a closed set, the millimetres are not.
   ['Medial', 'Lateral'],
   // F.11 — Heel cup depth, plus a custom value the prescriber may write in.
-  ['9mm', '12mm', '14mm', '16mm', '18mm', '20mm'],
+  HEEL_CUP_OPTIONS,
   // F.10 — Cast dressing. Tight to Arch is CLOSEST to the arch, Maximum is
   // farthest. This order must never be reversed. Moderate is the default.
-  ['Tight to Arch', 'Minimum', 'Moderate', 'Maximum'],
+  CAST_DRESSING_OPTIONS,
   // F.5 — Topcover length.
-  ['Full Length', 'Sulcus', '3/4'],
+  TOPCOVER_LENGTH_OPTIONS,
   // F.6 — Extra cushioning: placement, material, thickness.
   ['Full Length', 'Forefoot Only'],
   ['Puff', 'Poron'],
   ['1/16"', '1/8"'],
   // F.7 — Bottom cover.
-  ['Vinyl', 'J-Suede', 'Cordura', 'Puff', 'Nyplex'],
+  BOTTOM_COVER_OPTIONS,
   // F.0 — Orthotic style. A starting point, never a constraint.
-  [
-    'Build your own',
-    'Standard',
-    'Casual',
-    'Sport Performance',
-    'Sport Comfort',
-    'Dress',
-    'Diabetic',
-    'UCBL',
-    'EVA',
-    'Gait Plate',
-  ],
+  STYLE_OPTIONS,
   // F.0 — Style colour choices.
   ['Blue', 'Black'],
   ['Tan', 'Black'],
@@ -57,7 +67,7 @@ export const FORM_OPTION_SETS: string[][] = [
   ['Induce in-toeing', 'Induce out-toeing'],
   // F.9 — Rigidity. Family and level are named together, so both are sets.
   ['Poly', '3DP', 'Premium'],
-  ['Flexible', 'Semi-Flexible', 'Semi-Rigid', 'Rigid'],
+  RIGIDITY_LEVELS,
   ['2.3mm XT-Carbon', '2.6mm XT-Carbon', '1.5mm TL2100'],
   // F.4 — Topcover. One cover for the device, from one of three families.
   ['Vinyl', 'Foam', 'Fabric/Suede/Leather'],
@@ -96,9 +106,9 @@ export const FORM_OPTION_SETS: string[][] = [
     'Leather (Premium)',
   ],
   // F.3 — Orthotic width. Narrow takes a prescriber-supplied value.
-  ['Regular', 'Wide', 'Narrow'],
+  WIDTH_OPTIONS,
   // F.8 — Skid plate, and any other yes/no question LEOPA asks.
-  ['Yes', 'No'],
+  YES_NO_OPTIONS,
   // Closed-set answers to clinical questions that decide a form field.
   ['Present', 'Absent'],
   ['Prominent', 'Not prominent'],

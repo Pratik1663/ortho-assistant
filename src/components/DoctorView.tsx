@@ -16,7 +16,7 @@ import Composer, { type StagedOption } from './Composer'
 import DispensingView from './DispensingView'
 import Header from './Header'
 import MessageList, { type OptionSelection } from './MessageList'
-import PrescriptionPanel from './PrescriptionPanel'
+import PrescriptionPanel, { type FieldEdit } from './PrescriptionPanel'
 import { parsePrescriptionState } from '../prescriptionState'
 import TemplateManager from './TemplateManager'
 import SoapReview from './SoapReview'
@@ -180,6 +180,16 @@ export default function DoctorView({
     }
     return null
   })()
+
+  // A change made in the panel is sent as an ordinary message, so LEOPA sees it
+  // the same way as anything typed and the conversation stays the record.
+  const handleFieldEdit = (edit: FieldEdit) => {
+    const side = edit.side === 'R' ? ' on the right' : edit.side === 'L' ? ' on the left' : ''
+    const message = edit.value
+      ? `Change ${edit.label.toLowerCase()}${side} to ${edit.value}.`
+      : `I want to change ${edit.label.toLowerCase()}${side}.`
+    onSend(message, [])
+  }
 
   const handleSelectOption = (selection: OptionSelection) => {
     setStagedOption({
@@ -539,7 +549,13 @@ export default function DoctorView({
 
               {activeTab === 'consultation' && (
                 <div className="charting-workspace">
-                  {prescription && <PrescriptionPanel state={prescription} />}
+                  {prescription && (
+                    <PrescriptionPanel
+                      disabled={pending}
+                      onEdit={handleFieldEdit}
+                      state={prescription}
+                    />
+                  )}
                   <MessageList
                     messages={currentConversation.messages}
                     onSelectOption={handleSelectOption}

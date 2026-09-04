@@ -1044,3 +1044,103 @@ textarea:focus-visible {
   }
 }
 
+/* ---------------------------------------------------------------
+   Prescription panel — collapsed header and tighter rows
+   Append to the end of src/styles.css
+   Later rules win, so the earlier rx-panel block can stay as it is.
+   --------------------------------------------------------------- */
+
+.rx-panel {
+  max-height: 34vh;
+}
+
+.rx-panel-header {
+  padding: 8px clamp(14px, 3vw, 24px);
+}
+
+.rx-panel-count {
+  flex: 0 0 auto;
+}
+
+/* The per-side counts are the reason the collapsed header is worth having:
+   L 12 on a right-only build is visible without opening anything. */
+.rx-panel-sides {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  align-items: center;
+}
+
+.rx-side-count {
+  border: 1px solid #e0e8e5;
+  border-radius: 999px;
+  padding: 1px 8px;
+  color: #9aa8a4;
+  background: #ffffff;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.rx-side-count.active {
+  border-color: #cfe0da;
+  color: #175a52;
+  background: #eaf3f0;
+}
+
+.rx-panel-body {
+  padding: 2px clamp(14px, 3vw, 24px) 10px;
+}
+
+.rx-row {
+  padding: 3px 0;
+}
+
+.rx-label,
+.rx-cell {
+  font-size: 0.76rem;
+}
+
+.rx-cell.open {
+  min-height: 1em;
+}
+
+/* ---------------------------------------------------------------
+   Editable prescription rows — Ask LEOPA
+   Append to the end of src/styles.css
+   --------------------------------------------------------------- */
+
+.rx-row.editable {
+  border-radius: 6px;
+  margin: 0 -6px;
+  padding-right: 6px;
+  padding-left: 6px;
+  cursor: pointer;
+}
+
+.rx-row.editable:hover {
+  background: #eef4f2;
+}
+
+.rx-row.editing {
+  background: #eaf3f0;
+}
+
+.rx-row.editable:focus-visible {
+  outline: 2px solid #175a52;
+  outline-offset: -2px;
+}
+
+.rx-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  border-bottom: 1px solid #f0f4f2;
+  padding: 7px 6px 10px;
+}
+
+.rx-edit .option-chip {
+  padding: 4px 11px;
+  font-size: 0.76rem;
+}
+

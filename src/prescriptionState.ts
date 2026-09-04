@@ -1,3 +1,14 @@
+import {
+  BOTTOM_COVER_OPTIONS,
+  CAST_DRESSING_OPTIONS,
+  HEEL_CUP_OPTIONS,
+  RIGIDITY_LEVELS,
+  STYLE_OPTIONS,
+  TOPCOVER_LENGTH_OPTIONS,
+  WIDTH_OPTIONS,
+  YES_NO_OPTIONS,
+} from './formOptions'
+
 /**
  * The prescription as a structure rather than a conversation.
  *
@@ -10,6 +21,25 @@
  * missed update would leave the panel quietly wrong, and a panel that is
  * quietly wrong is worse than no panel at all.
  */
+
+/**
+ * What clicking a field in the panel offers.
+ *
+ * Only fields with a single closed set get chips. Posting, skives, topcover and
+ * the two list fields need a conversation — a heel skive is a side and a depth,
+ * a topcover is a family and then a colour — so those hand back to LEOPA rather
+ * than pretending a chip could settle them.
+ */
+export const FIELD_EDIT_OPTIONS: Record<string, string[]> = {
+  style: STYLE_OPTIONS,
+  rigidity: RIGIDITY_LEVELS,
+  width: WIDTH_OPTIONS,
+  cast_dressing: CAST_DRESSING_OPTIONS,
+  heel_cup: HEEL_CUP_OPTIONS,
+  topcover_length: TOPCOVER_LENGTH_OPTIONS,
+  bottom_cover: BOTTOM_COVER_OPTIONS,
+  skid_plate: YES_NO_OPTIONS,
+}
 
 /** Fields in the order they appear on the LEO Lab form. */
 export const RX_FIELDS: { key: string; label: string; perSide: boolean }[] = [
@@ -119,17 +149,33 @@ export function parsePrescriptionState(content: string): PrescriptionState | nul
   return state
 }
 
-/** How much of the form is settled, for the panel's progress line. */
+/**
+ * Counts for the panel header, which is all that shows when it is collapsed.
+ * The per-side ordered counts are the important part: one glance tells you
+ * whether a foot is being built that should not be.
+ */
 export function countSettled(state: PrescriptionState): {
   settled: number
   total: number
+  left: number
+  right: number
 } {
   let settled = 0
+  let left = 0
+  let right = 0
+
   for (const field of RX_FIELDS) {
     const entry = state[field.key]
     if (entry.left.status !== 'open' || entry.right.status !== 'open') {
       settled += 1
     }
+    if (entry.left.status === 'set') {
+      left += 1
+    }
+    if (entry.right.status === 'set') {
+      right += 1
+    }
   }
-  return { settled, total: RX_FIELDS.length }
+
+  return { settled, total: RX_FIELDS.length, left, right }
 }
