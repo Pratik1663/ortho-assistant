@@ -499,13 +499,38 @@ function buildWorkflowBlock(
   template?: string,
   hasApprovedCharting?: boolean,
 ): string | null {
-  if (action === 'consultation' && hasApprovedCharting) {
-    return [
-      'CHARTING AVAILABLE',
-      'The APPROVED CHARTING NOTES block above is this visit, already charted and approved by the practitioner. Treat it as the presentation you are building from — do not ask them to describe the patient again, and do not ask for anything the notes already answer.',
-      'Open by working from what is charted. Ask only for what is genuinely missing or undetermined for the build.',
-      'The notes are a record of the visit, not a prescription. Nothing in them is a decision about the device unless the practitioner says so here.',
-    ].join('\n')
+  if (action === 'consultation') {
+    const lines: string[] = []
+
+    if (hasApprovedCharting) {
+      lines.push(
+        'CHARTING AVAILABLE',
+        'The APPROVED CHARTING NOTES block above is this visit, already charted and approved by the practitioner. Treat it as the presentation you are building from — do not ask them to describe the patient again, and do not ask for anything the notes already answer.',
+        'Open by working from what is charted. Ask only for what is genuinely missing or undetermined for the build.',
+        'The notes are a record of the visit, not a prescription. Nothing in them is a decision about the device unless the practitioner says so here.',
+        '',
+      )
+    }
+
+    // Scoped to consultation on purpose. The marker is stripped and rendered
+    // as buttons by the client; if it reached the SOAP, document or charting
+    // actions it would corrupt output the client parses or files verbatim.
+    lines.push(
+      'CLICKABLE OPTIONS',
+      'When your reply asks the practitioner to pick from a set the LEO Lab form itself enumerates, end the reply with a marker on its own line, in exactly this shape:',
+      '[[OPTIONS: First | Second | Third]]',
+      'Rules for the marker:',
+      '- Only where the form enumerates the choices. Posting kind (extrinsic or intrinsic, varus or valgus), heel skive side, heel cup depth, cast dressing, topcover length, extra cushioning placement, material and thickness, bottom cover, orthotic width, skid plate, and laterality all qualify.',
+      '- Never for a value the prescriber writes in. Degrees, millimetres and narrowing amounts are typed, never offered as a marker.',
+      '- Never for an open question. Presentation, history, footwear, what the patient reported and anything else without a fixed answer set gets no marker.',
+      '- List the full set the form offers, not the subset you would pick. If you have a view on which is right, put it in the reply text where the practitioner can weigh it. Narrowing the list hides options they are entitled to see.',
+      '- One marker per reply, at the very end, with nothing after it.',
+      '- Never mention the marker, the options, buttons or clicking. The practitioner sees the choices rendered; you write as though you simply asked the question.',
+      '- The marker does not count toward the reply length limit.',
+      'A typed answer always outranks the offered set. If the practitioner types a value the form does not carry, say so plainly and ask how they want it handled. Never round it to the nearest listed option and never treat it as if it were on the form.',
+    )
+
+    return lines.join('\n')
   }
 
   if (action === 'template') {
