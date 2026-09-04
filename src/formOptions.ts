@@ -101,13 +101,19 @@ const MAX_OPTIONS_PER_GROUP = 8
 const MAX_GROUPS = 5
 
 /**
- * Marker, optionally labelled with the field it answers:
+ * Two markers, both optionally labelled with the field they answer:
  *   [[OPTIONS: Extrinsic | Intrinsic]]
  *   [[OPTIONS Heel cup depth: 9mm | 12mm | 14mm]]
+ *   [[INPUT Rearfoot posting degrees: degrees]]
+ * OPTIONS renders chips for a closed set. INPUT renders a small box beside the
+ * question for a value the prescriber writes in, so a number can be answered
+ * where it is asked rather than down in the message box.
+ *
  * The label is what makes several answers stageable at once without them
- * running together into something ambiguous.
+ * running together into something ambiguous, so INPUT requires one.
  */
-const MARKER = /\[\[OPTIONS(?:[ \t]+([^:\]]+?))?[ \t]*:[ \t]*([^\]]*)\]\]/g
+const MARKER =
+  /\[\[(OPTIONS|INPUT)(?:[ \t]+([^:\]]+?))?[ \t]*:[ \t]*([^\]]*)\]\]/g
 
 /**
  * A marker that has started but not finished arriving. While a reply streams
@@ -171,6 +177,8 @@ export interface MessageSegment {
   /** Which field these options answer, when the marker named one. */
   label?: string
   options: string[]
+  /** Present when the question wants a typed value rather than a choice. */
+  input?: { unit?: string }
 }
 
 /**
@@ -187,23 +195,36 @@ export function parseAssistantMessage(content: string): MessageSegment[] {
   let match = MARKER.exec(content)
 
   while (match) {
-    const options = groups < MAX_GROUPS ? cleanValues(match[2]) : []
+    const [whole, kind, rawLabel, payload] = match
+    const label = rawLabel?.trim() || undefined
     const text = content.slice(cursor, match.index).replace(/[ \t]+$/, '')
+    const withinBudget = groups < MAX_GROUPS
 
-    if (options.length > 0) {
+    // An INPUT with no label could not be staged as a named answer, so it is
+    // stripped and the question is answered in the message box instead.
+    if (kind === 'INPUT' && label && withinBudget) {
       groups += 1
       segments.push({
         text,
-        label: match[1]?.trim() || undefined,
-        options,
+        label,
+        options: [],
+        input: { unit: payload.trim() || undefined },
       })
+    } else if (kind === 'OPTIONS' && withinBudget) {
+      const options = cleanValues(payload)
+      if (options.length > 0) {
+        groups += 1
+        segments.push({ text, label, options })
+      } else if (text.length > 0) {
+        segments.push({ text, options: [] })
+      }
     } else if (text.length > 0) {
-      // A marker we could not use still gets stripped; its text is kept and
-      // merged with whatever follows so no gap is left in the reply.
+      // A marker we could not use still gets stripped; its text is kept so no
+      // gap is left in the reply.
       segments.push({ text, options: [] })
     }
 
-    cursor = match.index + match[0].length
+    cursor = match.index + whole.length
     match = MARKER.exec(content)
   }
 

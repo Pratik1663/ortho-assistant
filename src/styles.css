@@ -761,3 +761,44 @@ textarea:focus-visible {
   cursor: default;
 }
 
+/* ---------------------------------------------------------------
+   Inline value boxes — Ask LEOPA
+   Append to the end of src/styles.css
+   --------------------------------------------------------------- */
+
+.option-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0 8px;
+  vertical-align: middle;
+}
+
+.option-input {
+  width: 88px;
+  border: 1px solid #b9c8c4;
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: #123b35;
+  background: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.option-input::placeholder {
+  color: #9aa8a4;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.option-input:focus {
+  border-color: #175a52;
+  outline: 3px solid rgb(23 90 82 / 14%);
+}
+
+/* A committed value reads as answered, matching a chosen chip. */
+.option-input.filled {
+  border-color: #175a52;
+  background: #eaf3f0;
+}
+

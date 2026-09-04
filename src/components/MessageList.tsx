@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Message } from '../App'
 import { parseAssistantMessage } from '../formOptions'
 
@@ -12,13 +12,71 @@ interface MessageListProps {
   messages: Message[]
   pending: boolean
   /**
-   * Called when an option is chosen. The answer is staged in the composer
-   * rather than sent, so several can be gathered and edited before sending.
-   * When omitted, chips are not rendered at all.
+   * Called when an option is chosen or a value typed. The answer is staged in
+   * the composer rather than sent, so several can be gathered and edited
+   * before sending. When omitted, chips and boxes are not rendered at all.
    */
   onSelectOption?: (selection: OptionSelection) => void
   /** Answers already staged, keyed by label, so chosen chips read as chosen. */
   selectedOptions?: Record<string, string>
+}
+
+/**
+ * A small box beside a question that wants a written value — degrees,
+ * millimetres. Commits on Enter or on leaving the box, and stages the answer
+ * the same way a chip does, so it lands as a labelled pill and never sends on
+ * its own.
+ */
+function InlineValue({
+  label,
+  unit,
+  staged,
+  onCommit,
+}: {
+  label: string
+  unit?: string
+  staged?: string
+  onCommit: (value: string) => void
+}) {
+  const [value, setValue] = useState(staged ?? '')
+
+  // A pill removed above the box should clear the box too, otherwise the two
+  // disagree about what has been answered.
+  useEffect(() => {
+    setValue(staged ?? '')
+  }, [staged])
+
+  const commit = () => {
+    const trimmed = value.trim()
+    // Only fire on a real change, so re-committing the same value cannot
+    // toggle the staged answer back off.
+    if (trimmed.length > 0 && trimmed !== staged) {
+      onCommit(trimmed)
+    }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commit()
+    }
+  }
+
+  return (
+    <span className="option-input-wrap">
+      <input
+        aria-label={label}
+        className={`option-input${staged ? ' filled' : ''}`}
+        inputMode="decimal"
+        onBlur={commit}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={unit ?? ''}
+        type="text"
+        value={value}
+      />
+    </span>
+  )
 }
 
 function MessageList({
@@ -53,23 +111,26 @@ function MessageList({
           isStreaming && !awaitingFirstToken && index === visibleMessages.length - 1
         const isLast = index === visibleMessages.length - 1
 
-        // Assistant replies may carry option markers. Strip them from the text
-        // either way; only the newest settled reply gets chips, so an older
-        // message's options cannot be clicked out of context.
+        // Assistant replies may carry markers. Strip them from the text either
+        // way; only the newest settled reply gets controls, so an older
+        // message's options cannot be answered out of context.
         const segments =
           message.role === 'assistant'
             ? parseAssistantMessage(message.content)
             : [{ text: message.content, options: [] as string[] }]
 
-        const chipsAllowed =
+        const controlsAllowed =
           Boolean(onSelectOption) &&
           message.role === 'assistant' &&
           isLast &&
           !isLive &&
           !pending
 
-        const hasAnyChips =
-          chipsAllowed && segments.some((segment) => segment.options.length > 0)
+        const hasAnyControls =
+          controlsAllowed &&
+          segments.some(
+            (segment) => segment.options.length > 0 || Boolean(segment.input),
+          )
 
         return (
           <div className={`message-row ${message.role}`} key={index}>
@@ -87,14 +148,27 @@ function MessageList({
                 </div>
               )}
               {segments.map((segment, segmentIndex) => {
-                const showChips = chipsAllowed && segment.options.length > 0
                 const chosen = segment.label
                   ? selectedOptions?.[segment.label.toLowerCase()]
                   : undefined
+                const showChips = controlsAllowed && segment.options.length > 0
+                const showInput =
+                  controlsAllowed && Boolean(segment.input) && Boolean(segment.label)
 
                 return (
                   <span key={segmentIndex}>
                     {segment.text}
+                    {showInput && segment.label && (
+                      <InlineValue
+                        key={`${index}-${segment.label}`}
+                        label={segment.label}
+                        onCommit={(value) =>
+                          onSelectOption?.({ label: segment.label, value })
+                        }
+                        staged={chosen}
+                        unit={segment.input?.unit}
+                      />
+                    )}
                     {showChips && (
                       <span
                         className="option-chips"
@@ -119,9 +193,9 @@ function MessageList({
                 )
               })}
               {isLive && <span className="stream-caret" aria-hidden="true" />}
-              {hasAnyChips && (
+              {hasAnyControls && (
                 <div className="option-chips-hint">
-                  Click to answer, or type instead — a typed value always wins.
+                  Answer here or in the message box — a typed value always wins.
                 </div>
               )}
             </div>
