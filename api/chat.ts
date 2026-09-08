@@ -769,6 +769,17 @@ export default async function handler(
 
     const requestOptions = {
       model: 'claude-sonnet-4-6',
+      // The same presentation should produce the same device. At the default
+      // temperature two identical cases returned different cast dressings,
+      // topcover lengths and cushioning placements — differences a practitioner
+      // would have to argue with rather than read past, and the first thing
+      // anyone testing the tool does is run the same case twice.
+      //
+      // 0.2 rather than 0: low enough that the fields hold steady, high enough
+      // that the reasoning still reaches for a connection rather than reciting
+      // the most probable path. Raise it if proposals start reading formulaic;
+      // lower it if fields drift between identical runs.
+      temperature: 0.2,
       max_tokens: maxTokens,
       system: systemBlocks as unknown as Anthropic.TextBlockParam[],
       messages: withHistoryCaching(
@@ -811,7 +822,6 @@ export default async function handler(
 
       const finalMessage = await stream.finalMessage()
       if (finalMessage.stop_reason !== 'end_turn' || !parsePrescriptionState(fullText)) {
-        console.error('LEOPA incomplete:', { stop_reason: finalMessage.stop_reason, rxParsed: Boolean(parsePrescriptionState(fullText)), tail: fullText.slice(-700) })
         throw new Error('Incomplete consultation response')
       }
       res.write(JSON.stringify({ type: 'complete' }) + '\n')
