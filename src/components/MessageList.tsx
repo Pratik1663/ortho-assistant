@@ -85,6 +85,25 @@ function InlineValue({
   )
 }
 
+/**
+ * Renders **bold** spans and leaves everything else alone.
+ *
+ * Deliberately not a markdown parser. LEOPA emits one thing that needs
+ * emphasis — its read on whether an item is indicated — and a full parser
+ * would start interpreting asterisks, underscores and hyphens that appear
+ * legitimately in prescriptions.
+ */
+function withEmphasis(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, index) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
+      <strong key={index}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    ),
+  )
+}
+
 function MessageList({
   messages,
   pending,
@@ -174,7 +193,7 @@ function MessageList({
 
                 return (
                   <span key={segmentIndex}>
-                    {segment.text}
+                    {withEmphasis(segment.text)}
                     {(showChips || showInput) && needsLabel && (
                       <span className="option-group-label">{segment.label}</span>
                     )}

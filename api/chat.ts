@@ -313,23 +313,56 @@ function parseBody(body: unknown): ParsedBody | null {
   }
 }
 
+type CacheControl = { cache_control?: { type: 'ephemeral' } }
+
 type ContentBlock =
-  | { type: 'text'; text: string }
-  | {
+  | ({ type: 'text'; text: string } & CacheControl)
+  | ({
       type: 'image'
       source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png'; data: string }
-    }
-  | {
+    } & CacheControl)
+  | ({
       type: 'document'
       source: { type: 'base64'; media_type: 'application/pdf'; data: string }
-    }
+    } & CacheControl)
 
 type ApiMessage = ChatMessage | { role: 'user'; content: ContentBlock[] }
 
+// Every consultation reply carries a full prescription block, and history is
+// resent on every turn. Left alone, a twenty-turn build pays for two dozen
+// stale snapshots of a prescription that has since changed — cost the clinic
+// absorbs for nothing. Only the most recent block describes the current build,
+// so the rest are dropped before the request goes out. The client still has
+// them all in localStorage, so the panel is unaffected.
+const RX_BLOCK_IN_HISTORY = /\n*\[\[RX\s*[\s\S]*?\]\]/g
+
+function trimStalePrescriptionBlocks(messages: ChatMessage[]): ChatMessage[] {
+  let lastAssistant = -1
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].role === 'assistant' && /\[\[RX/.test(messages[i].content)) {
+      lastAssistant = i
+      break
+    }
+  }
+
+  if (lastAssistant < 0) {
+    return messages
+  }
+
+  return messages.map((message, index) => {
+    if (index === lastAssistant || message.role !== 'assistant') {
+      return message
+    }
+    const trimmed = message.content.replace(RX_BLOCK_IN_HISTORY, '')
+    return trimmed === message.content ? message : { ...message, content: trimmed }
+  })
+}
+
 function buildApiMessages(
-  messages: ChatMessage[],
+  rawMessages: ChatMessage[],
   attachments?: Attachment[],
 ): ApiMessage[] {
+  const messages = trimStalePrescriptionBlocks(rawMessages)
   if (!attachments || attachments.length === 0) {
     return messages
   }
@@ -365,6 +398,48 @@ function buildApiMessages(
 // but SOAP, document and template actions fire straight after a LEOPA reply,
 // so they need a closing user turn to make the request valid.
 const TRAILING_USER_TURN = 'Produce the output described above.'
+
+/**
+ * Cache the conversation history.
+ *
+ * Every turn resends the whole conversation, so a twenty-five exchange build
+ * re-reads all of it twenty-five times. Marking the second-to-last turn means
+ * everything before it is read from cache at a fraction of the input price,
+ * while the newest exchange stays uncached and current. The prescription is
+ * long-form work and these conversations get long, so this is where most of
+ * the cost sits.
+ *
+ * The breakpoint goes one turn back rather than on the last: the final turn
+ * changes with every request, and a breakpoint there would never be reused.
+ */
+function withHistoryCaching(messages: ApiMessage[]): ApiMessage[] {
+  // Below this there is nothing worth caching — the minimum cacheable prefix
+  // would not be met and the bookkeeping costs more than it saves.
+  if (messages.length < 6) {
+    return messages
+  }
+
+  const index = messages.length - 3
+  const target = messages[index]
+  const content =
+    typeof target.content === 'string'
+      ? [{ type: 'text' as const, text: target.content }]
+      : target.content
+
+  if (!Array.isArray(content) || content.length === 0) {
+    return messages
+  }
+
+  const marked = [...content]
+  marked[marked.length - 1] = {
+    ...marked[marked.length - 1],
+    cache_control: { type: 'ephemeral' as const },
+  } as ContentBlock
+
+  return messages.map((message, i) =>
+    i === index ? ({ ...message, content: marked } as ApiMessage) : message,
+  )
+}
 
 function ensureTrailingUserTurn(messages: ApiMessage[]): ApiMessage[] {
   const last = messages[messages.length - 1]
@@ -581,7 +656,10 @@ function buildWorkflowBlock(
       'Do not offer yes and no, and do not offer a skip. Clicking No or Skip twelve times to confirm what you already said was not indicated is work that buys nothing; the practitioner adds what they want and the rest are simply not ordered.',
       'Write the item name in the line itself, not only in a paragraph above the list. A run of markers whose names live somewhere else leaves the practitioner looking at a column of identical buttons with nothing to tell them apart.',
       'Put your read beside each in a few words — "indicated", "no forefoot complaint", "worth considering, hard floors all day". Keep those reads to a clause. The list itself is the record that all thirteen were considered, so nothing needs saying twice.',
+      'Wrap your read in double asterisks so it stands out from the item name: Medial Flange (shell) — **indicated, core of the medial control stack**. Only the read gets the asterisks, never the item name, and use them nowhere else in your replies — emphasis everywhere is emphasis nowhere.',
       'Say plainly at the end of that message that anything not added will be recorded as not ordered, and name in the closing summary which additions were ordered and that the rest were not.',
+      'End both lists with one more line offering a single chip that takes the whole section at once — [[OPTIONS Shell modifications: None of these]] or [[OPTIONS Additions: None of these]]. Nothing indicated is the common outcome and it should cost one click rather than a typed sentence.',
+      'The same applies wherever you put several related questions in one message. If the honest answer to all of them might be nothing, offer a chip that says so.',
       'Second pass — for every item added, ask what it needs, one question per line. Side comes first and is always asked, as three chips: Left, Right, Bilateral. Never infer it from the presentation and never assume bilateral. A right-sided presentation makes right the likely answer, not a settled one, and an unasked side is how a second full-priced device gets built.',
       'Ask side as its own question. "Which mets do you want cut out, and is this right side only?" collects a side and loses the mets, because one answer cannot serve two questions.',
       'Then the item\'s own options: Archfill soft or firm, Met Pads full, medium or low, Heel Cushion and the extensions 1/16" or 1/8". Neuroma Pad needs which two mets it sits between, and Met Accommodation Pad needs which mets are cut out — both from the practitioner, never assumed. Met pad placement defaults to 5mm past the shell; any other distance is theirs to give.',
@@ -607,6 +685,7 @@ function buildWorkflowBlock(
       'UNSPECIFIED MEANS BOTH FEET',
       'A prescription is bilateral unless something makes it otherwise. Walk the form once and take every answer as applying to both feet. Do not ask which side each field is for, and do not ask for laterality up front — the ordinary case is a matched pair, and asking sixteen times to establish that wastes the practitioner\'s afternoon.',
       'What makes a build unilateral is being told so: the presentation describes one foot and calls the other unremarkable, or the practitioner says one side only. Until then, both.',
+      'When a build is for one foot, say so once at the start, plainly — "Right foot only, then; left is unremarkable so nothing is ordered there." The practitioner should not have to reach the closing summary to find out which foot they have been prescribing for. Do not repeat it on every answer after that; once at the top is enough, and it goes in the summary again at the end.',
       'A difference between the feet is named when it arises. "4 degrees left, 2 right" splits that one field and leaves the rest matched. You take the split without comment and carry on; you do not then start asking about sides on everything else.',
       'When the build is for one foot only, work that side through the whole form, then ask once what happens to the other: copy it across, copy it with some values changed, or nothing on that side. Copying costs one click, and you do not re-walk the form to achieve it. Where they want changes, ask which fields differ and ask only about those.',
       'A foot deliberately left out is decided, not undecided. Record every field for it as none, so the panel shows a column of "not ordered" rather than a column of blanks.',
@@ -791,14 +870,29 @@ export default async function handler(
     )
     const baseSystem = systemPrompt.replace('{{KNOWLEDGE_BASE}}', knowledgeBase)
 
-    // Static block first (cached), then anything that changes per request.
+    // Cache hits are prefix matches, so ordering is what makes them work:
+    // everything static first, then the breakpoint, then anything that varies
+    // per request. The workflow rules are static for a given action and are
+    // large, so they belong inside the cached prefix rather than after it —
+    // sitting last, they were being paid for in full on every single turn.
+    const workflowBlock = buildWorkflowBlock(
+      parsed.action,
+      parsed.documentType,
+      parsed.template,
+      Boolean(parsed.approvedCharting),
+    )
+
     const systemBlocks: SystemBlock[] = [
-      {
-        type: 'text',
-        text: baseSystem,
-        cache_control: { type: 'ephemeral' },
-      },
+      { type: 'text', text: baseSystem },
     ]
+
+    if (workflowBlock) {
+      systemBlocks.push({ type: 'text', text: workflowBlock })
+    }
+
+    // The breakpoint goes on the last static block, so the prompt, knowledge
+    // base and rules are all cached together.
+    systemBlocks[systemBlocks.length - 1].cache_control = { type: 'ephemeral' }
 
     const patientContextBlock = buildPatientContextBlock(parsed.patientContext)
     if (patientContextBlock) {
@@ -810,16 +904,6 @@ export default async function handler(
     )
     if (approvedChartingBlock) {
       systemBlocks.push({ type: 'text', text: approvedChartingBlock })
-    }
-
-    const workflowBlock = buildWorkflowBlock(
-      parsed.action,
-      parsed.documentType,
-      parsed.template,
-      Boolean(parsed.approvedCharting),
-    )
-    if (workflowBlock) {
-      systemBlocks.push({ type: 'text', text: workflowBlock })
     }
 
     const anthropic = new Anthropic({ apiKey })
@@ -836,8 +920,10 @@ export default async function handler(
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       system: systemBlocks as unknown as Anthropic.TextBlockParam[],
-      messages: ensureTrailingUserTurn(
-        buildApiMessages(parsed.messages, parsed.attachments),
+      messages: withHistoryCaching(
+        ensureTrailingUserTurn(
+          buildApiMessages(parsed.messages, parsed.attachments),
+        ),
       ) as Anthropic.MessageParam[],
       // SOAP is the one action whose output the client parses rather than
       // displays, so it is forced through a schema instead of being asked
