@@ -31,6 +31,7 @@ export const STYLE_OPTIONS = [
   'EVA',
   'Gait Plate',
 ]
+export const PREMIUM_SHELL_OPTIONS = ['2.3mm XT-Carbon', '2.6mm XT-Carbon', '1.5mm TL2100']
 export const RIGIDITY_LEVELS = ['Flexible', 'Semi-Flexible', 'Semi-Rigid', 'Rigid']
 export const WIDTH_OPTIONS = ['Regular', 'Wide', 'Narrow']
 export const CAST_DRESSING_OPTIONS = ['Tight to Arch', 'Minimum', 'Moderate', 'Maximum']
@@ -68,7 +69,7 @@ export const FORM_OPTION_SETS: string[][] = [
   // F.9 — Rigidity. Family and level are named together, so both are sets.
   ['Poly', '3DP', 'Premium'],
   RIGIDITY_LEVELS,
-  ['2.3mm XT-Carbon', '2.6mm XT-Carbon', '1.5mm TL2100'],
+  PREMIUM_SHELL_OPTIONS,
   // F.4 — Topcover. One cover for the device, from one of three families.
   ['Vinyl', 'Foam', 'Fabric/Suede/Leather'],
   [

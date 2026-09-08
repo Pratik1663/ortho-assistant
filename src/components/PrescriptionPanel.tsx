@@ -3,6 +3,7 @@ import {
   FIELD_EDIT_OPTIONS,
   RX_FIELDS,
   countSettled,
+  canAcceptPrescription,
   type FieldSide,
   type PrescriptionState,
 } from '../prescriptionState'
@@ -20,6 +21,8 @@ export interface FieldEdit {
 
 interface PrescriptionPanelProps {
   state: PrescriptionState
+  confirmed?: boolean
+  onAccept?: () => void
   onEdit?: (edit: FieldEdit) => void
   disabled?: boolean
 }
@@ -46,6 +49,11 @@ function Cell({
         // must not also fire the row handler.
         event.stopPropagation()
         onClick()
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault(); event.stopPropagation(); onClick()
+        }
       }}
       role="button"
       tabIndex={0}
@@ -76,7 +84,7 @@ function renderValue(side: FieldSide) {
       </span>
     )
   }
-  return <span className={`rx-cell ${side.status}`}>{side.value}</span>
+  return <span className={`rx-cell ${side.status}`}>{side.status === 'none' ? 'None' : side.value}</span>
 }
 
 /**
@@ -89,7 +97,7 @@ function renderValue(side: FieldSide) {
  * Rows are clickable so a field can be corrected where it is shown, rather
  * than by hunting back through the conversation for where it was decided.
  */
-function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) {
+function PrescriptionPanel({ state, onEdit, disabled, confirmed = false, onAccept }: PrescriptionPanelProps) {
   // Collapsed by default. The header carries the counts, which is the part
   // worth seeing continuously; the rows are for when you want to check.
   const [open, setOpen] = useState(false)
@@ -114,10 +122,7 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
    * matters when a matched pair needs to come apart.
    */
   const choose = (key: string, label: string, value?: string, side?: 'L' | 'R') => {
-    const entry = state[key]
-    const split =
-      entry.left.status !== entry.right.status || entry.left.value !== entry.right.value
-    onEdit?.({ key, label, side: side ?? (split ? 'R' : undefined), value })
+    onEdit?.({ key, label, side, value })
     setEditing(null)
     setTarget(null)
   }
@@ -130,7 +135,7 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <span className="rx-panel-title">Prescription</span>
+        <span className="rx-panel-title">{confirmed ? 'Confirmed prescription' : 'Suggested prescription'}</span>
         <span className="rx-panel-count">
           {settled} of {total}
         </span>
@@ -148,6 +153,15 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
         </span>
       </button>
 
+      <div className="rx-review-status">
+        <span>{confirmed ? 'Accepted by practitioner' : 'Awaiting practitioner acceptance'}</span>
+        {!confirmed && onAccept && (
+          <button type="button" className="workflow-primary" onClick={onAccept}
+            disabled={disabled || !canAcceptPrescription(state)}>
+            Accept prescription
+          </button>
+        )}
+      </div>
       {open && (
         <div className="rx-panel-body">
           <div className="rx-row rx-head">
@@ -177,6 +191,12 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
                         }
                       : undefined
                   }
+                  onKeyDown={(event) => {
+                    if (editable && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault(); setTarget(null)
+                      setEditing((current) => current === field.key ? null : field.key)
+                    }
+                  }}
                   role={editable ? 'button' : undefined}
                   tabIndex={editable ? 0 : undefined}
                 >

@@ -1,0 +1,33 @@
+LEOPA - RUN THIS BUILD ON WINDOWS
+
+1. Extract the ZIP completely. Do not run it inside the ZIP viewer.
+2. Open the extracted leopa-developer folder (the folder containing package.json).
+3. Install Node.js 22 or newer if it is not installed.
+4. For chat, copy .env.example to .env.local and enter your existing key:
+   ANTHROPIC_API_KEY=your_actual_key_here
+   Save it as .env.local, not .env.local.txt. Keep this file private.
+5. Double-click START-LEOPA.cmd.
+6. When the server is ready, open http://127.0.0.1:4173 in your browser.
+   Keep the command window open while using LEOPA.
+
+If Windows blocks the .cmd file, use Command Prompt in this folder:
+
+npm ci
+npm run build
+npm start
+
+For development with automatic reload instead:
+npm run dev
+Open http://127.0.0.1:5173
+
+Both modes now serve the app AND its /api/chat endpoint locally.
+No Vercel account is needed for local use. An Anthropic API key and credits
+are required for AI replies. Adding the key does not deploy anything.
+
+If a port is already in use, stop the earlier LEOPA window with Ctrl+C.
+Use the same browser and URL each time: records are saved in that browser.
+Development and built-preview URLs have different browser storage because
+they use different ports. This local runner is for testing, not clinic hosting.
+
+This download contains source code, not node_modules or generated dist files.
+The commands install the locked dependencies and build the app on your computer.

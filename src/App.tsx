@@ -1,3 +1,5 @@
+import { readChatStream } from './chatStream'
+import { ACCEPT_PRESCRIPTION, acceptanceReply, currentPrescription } from './prescriptionState'
 import { useEffect, useState } from 'react'
 import DoctorView from './components/DoctorView'
 import ReceptionistView from './components/ReceptionistView'
@@ -506,14 +508,6 @@ const replacePatientPlaceholder = (content: string, displayName: string) =>
 
 // Drops a trailing assistant placeholder that never received any text,
 // so a failed request doesn't leave an empty bubble behind.
-const dropEmptyPlaceholder = (messages: Message[]): Message[] => {
-  const last = messages[messages.length - 1]
-  if (last && last.role === 'assistant' && last.content === '') {
-    return messages.slice(0, -1)
-  }
-  return messages
-}
-
 const replaceLastMessage = (messages: Message[], content: string): Message[] => {
   if (messages.length === 0) {
     return messages
@@ -697,33 +691,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       throw new Error(GENERIC_ERROR)
     }
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let textSoFar = ''
-
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) {
-        break
-      }
-      const chunk = decoder.decode(value, { stream: true })
-      if (chunk.length > 0) {
-        textSoFar += chunk
-        onText(textSoFar)
-      }
-    }
-
-    const tail = decoder.decode()
-    if (tail.length > 0) {
-      textSoFar += tail
-      onText(textSoFar)
-    }
-
-    if (textSoFar.trim().length === 0) {
-      throw new Error(GENERIC_ERROR)
-    }
-
-    return textSoFar
+    return readChatStream(response.body.getReader(), onText)
   }
 
   const handleSend = async (
@@ -731,6 +699,23 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     attachments: OutgoingAttachment[] = [],
   ) => {
     if (pendingAction || content.trim().length === 0) {
+      return
+    }
+
+    if (content.trim() === ACCEPT_PRESCRIPTION && workspace !== 'quick' && currentPatient && currentConversation) {
+      const messages = currentConversation.messages
+      const last = messages[messages.length - 1]
+      const reply = last?.role === 'assistant' ? acceptanceReply(last.content) : null
+      if (!reply) {
+        setErrorMessage('Resolve open or flagged prescription fields before accepting.')
+        return
+      }
+      updateConversation(currentPatient.id, currentConversation.id, (conversation) => ({
+        ...conversation,
+        messages: [...messages, { role: 'user', content: ACCEPT_PRESCRIPTION }, { role: 'assistant', content: reply }],
+        soapNote: null, soapApproved: false, documents: {},
+      }))
+      setErrorMessage('')
       return
     }
 
@@ -771,7 +756,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
         setErrorMessage(GENERIC_ERROR)
         setAppState((current) => ({
           ...current,
-          quickMessages: dropEmptyPlaceholder(current.quickMessages),
+          quickMessages: replaceLastMessage(current.quickMessages, 'The reply was interrupted. Please retry.'),
         }))
       } finally {
         setPendingAction(null)
@@ -790,6 +775,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     updateConversation(patientId, conversationId, (conversation) => ({
       ...conversation,
       messages: [...updatedMessages, placeholder],
+      soapNote: null, soapApproved: false, documents: {},
     }))
 
     try {
@@ -815,7 +801,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       setErrorMessage(GENERIC_ERROR)
       updateConversation(patientId, conversationId, (conversation) => ({
         ...conversation,
-        messages: dropEmptyPlaceholder(conversation.messages),
+        messages: replaceLastMessage(conversation.messages, 'The reply was interrupted. Please ask LEOPA to retry before using this suggestion.'),
       }))
     } finally {
       setPendingAction(null)
@@ -897,6 +883,10 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
         chartedAt:
           conversation.chartedAt ??
           (value.trim().length > 0 ? new Date().toISOString() : null),
+        messages: supersedesSummary && currentPrescription(conversation.messages).confirmed
+          ? [...conversation.messages, { role: 'user' as const, content: 'The source charting has changed. Review the prescription against the updated approved charting before accepting it again.' }]
+          : conversation.messages,
+        soapNote: supersedesSummary ? null : conversation.soapNote,
         chartingApproved: supersedesSummary ? false : conversation.chartingApproved,
         soapApproved: supersedesSummary ? false : conversation.soapApproved,
         documents: supersedesSummary ? {} : conversation.documents,
@@ -963,6 +953,10 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     updateConversation(currentPatient.id, currentConversation.id, (conversation) => ({
       ...conversation,
       chartingNotes: value,
+      chartingApproved: false, soapNote: null, soapApproved: false, documents: {},
+      messages: currentPrescription(conversation.messages).confirmed
+        ? [...conversation.messages, { role: 'user', content: 'The charting notes have changed. Review the prescription against the updated approved charting before accepting it again.' }]
+        : conversation.messages,
     }))
   }
 
@@ -979,6 +973,11 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
 
   const handleGenerateSoap = async () => {
     if (pendingAction || !currentPatient || !currentConversation) {
+      return
+    }
+
+    if (currentConversation.messages.length > 0 && !currentPrescription(currentConversation.messages).confirmed) {
+      setErrorMessage('Accept the suggested prescription before generating SOAP notes from this consultation.')
       return
     }
 

@@ -1226,3 +1226,6 @@ textarea:focus-visible {
   text-transform: uppercase;
 }
 
+
+/* Prescription review state: acceptance is separate from a suggested build. */
+.rx-review-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem 1rem; font-size: .875rem; border-top: 1px solid #d6dce4; }

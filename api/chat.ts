@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { parsePrescriptionState, currentPrescription, prescriptionSummary } from '../src/prescriptionState'
 
 type ChatMessage = {
   role: 'user' | 'assistant'
@@ -462,10 +463,6 @@ function ensureTrailingUserTurn(messages: ApiMessage[]): ApiMessage[] {
 // prose is not expressible, and every key is guaranteed present.
 const SOAP_TOOL_NAME = 'record_soap_note'
 
-// Shown to the practitioner in the editable SOAP draft. They can delete it if
-// they are adopting the impression as their own, which is the point: the
-// default is honest and changing it is a deliberate act.
-const AI_ASSESSMENT_PREFIX = 'AI-generated impression, not stated by clinician: '
 
 const SOAP_TOOL = {
   name: SOAP_TOOL_NAME,
@@ -485,13 +482,13 @@ const SOAP_TOOL = {
       assessment: {
         type: 'string',
         description:
-          'The clinical picture. May be what the practitioner stated, or your own reading of the findings — declare which in assessment_source.',
+          'Only the assessment explicitly stated by the practitioner; otherwise empty.',
       },
       assessment_source: {
         type: 'string',
-        enum: ['practitioner_stated', 'ai_inferred', 'not_assessed'],
+        enum: ['practitioner_stated', 'not_assessed'],
         description:
-          "practitioner_stated only when the practitioner named the condition themselves. ai_inferred when you are naming or narrowing it from the findings, including any 'consistent with' or 'likely' phrasing — this is a normal and expected outcome, not a fallback. not_assessed only when the findings genuinely support nothing, in which case assessment must be an empty string.",
+          "Use practitioner_stated only for an explicitly supplied assessment. Otherwise not_assessed with an empty assessment. Never infer a diagnosis or impression.",
       },
       plan: {
         type: 'string',
@@ -575,192 +572,7 @@ function buildWorkflowBlock(
   hasApprovedCharting?: boolean,
 ): string | null {
   if (action === 'consultation') {
-    const lines: string[] = []
-
-    if (hasApprovedCharting) {
-      lines.push(
-        'CHARTING AVAILABLE',
-        'The APPROVED CHARTING NOTES block above is this visit, already charted and approved by the practitioner. Treat it as the presentation you are building from — do not ask them to describe the patient again, and do not ask for anything the notes already answer.',
-        'Open by working from what is charted. Ask only for what is genuinely missing or undetermined for the build.',
-        'The notes are a record of the visit, not a prescription. Nothing in them is a decision about the device unless the practitioner says so here.',
-        '',
-      )
-    }
-
-    // Scoped to consultation on purpose. The marker is stripped and rendered
-    // as buttons by the client; if it reached the SOAP, document or charting
-    // actions it would corrupt output the client parses or files verbatim.
-    lines.push(
-      'CLICKABLE OPTIONS',
-      'When a question you ask has a closed set of answers, put a marker at the end of that question, on the same line, in exactly this shape:',
-      '[[OPTIONS Field name: First | Second | Third]]',
-      'The field name is what the answer sets — "Rearfoot posting", "Heel cup depth", "Navicular". It is how several answers are kept apart when the practitioner answers more than one question at once, so always include it.',
-      'Where a marker belongs:',
-      'The test is one thing, and it holds everywhere in the conversation: if the honest answers to your question form a closed set, that question takes a marker. Not only when the field is on the form, not only once the form walk has started, not only for the sections named below. The opening question, a mid-build clarification, a follow-up at the end — all the same. If you would otherwise be making the practitioner type a word you could have offered, offer it.',
-      '- Fields the LEO Lab form enumerates. Posting kind, heel skive side, heel cup depth, cast dressing, topcover length, extra cushioning placement, material and thickness, bottom cover, orthotic rigidity, orthotic width, skid plate, laterality.',
-      '- Closed-set answers to your own clinical questions, even where the answer is not itself a form field. Yes or no, present or absent, prominent or not, tender or not, left or right. "Is the navicular tender on palpation, or just the tendon?" is a two-option question and takes a marker like any other.',
-      'Where a marker must never go:',
-      '- Any value the prescriber writes in. Degrees, millimetres, narrowing amounts. Never offer common values as a shortcut; a wrong click on a number becomes a wrong device. These take an input marker instead, described next.',
-      '- Open questions. Presentation, history, footwear, what the patient reported, anything answered in a sentence.',
-      '',
-      'VALUES THE PRESCRIBER WRITES IN',
-      'A zero is not always the same thing. Zero degrees of rearfoot posting is a real, orderable instruction — a neutral post, built flat. Zero millimetres of heel skive is not an order at all; it means no skive. Take both at face value without querying them, but write them differently in any summary: a neutral post is stated as ordered, while a zero skive is written as none rather than as 0mm, because a number in a summary reads as a specified value and invites the lab to build one.',
-      'A question wanting a number rather than a choice takes an input marker at the end of that question, on the same line:',
-      '[[INPUT Field name: unit]]',
-      'The unit is the hint shown in the box — "degrees", "mm". The field name is required, exactly as for options.',
-      'Use it for degrees of posting, millimetres of skive, heel lift height, how much narrower a narrow width should be. Never use it for something with a fixed answer set; that is an options marker.',
-      'One question per line, and at most one marker on it. This holds whatever the markers are. "How many degrees of rearfoot varus, and how deep a skive?" is two questions sharing a line and needs to be two lines, each with its own input marker. "Intrinsic or extrinsic, and how many degrees" is likewise two — one options marker, one input marker, one per line. A line carrying two markers gives the practitioner no way to tell which box belongs to which question.',
-      '',
-      'RIGIDITY IS A LEVEL, NOT A MATERIAL',
-      'Propose the rigidity level and nothing else: Flexible, Semi-Flexible, Semi-Rigid or Rigid. That is the clinical decision, and it is the only part of this field the practitioner is choosing.',
-      'Poly and 3DP are how the lab makes the shell, not what the practitioner prescribes. Do not write "Poly Semi-Rigid" or "3DP Rigid" and do not offer the two as alternatives — presenting a process choice as a clinical one invites a decision that is not theirs to make and was never on the form as one.',
-      'EVA and the Premium shells are different, because those are materials that behave differently under load. Raise EVA where an accommodative device is what the presentation calls for, and raise a Premium carbon shell where a thin, high-stiffness shell is the point — dress footwear with real control demand, for instance. Say what the material buys and let them decide. Otherwise stay on the level alone.',
-      'If the practitioner names Poly or 3DP themselves, take it without comment and carry it through. It is theirs to specify if they want to; it is just not yours to ask about.',
-      '',
-      'TOPCOVER IS TWO STEPS',
-      'The topcover menu is three families — Vinyl, Foam, Fabric/Suede/Leather — each with its own list. Propose a specific cover from a specific family; if the practitioner asks to change family, then offer that family\'s full list.',
-      'Keep the families straight. ETC, Bamboo, Neoprene, Suede and Leather are Fabric/Suede/Leather. The foam colours are Black, Grey Swirl, Pink Swirl, Blue Swirl, Pink/Purple, Blue/Green, Camo, Perforated Black, Pink Diabetic and Black Diabetic. Offering an ETC cover as a foam option is naming a product that does not exist.',
-      'Never jump straight to one family\'s colours as though it were the whole menu. Offering the eight vinyl colours to a practitioner who has not chosen vinyl silently removes every foam and fabric option from consideration.',
-      'Colour names repeat across families and mean different products, so a colour without its family is ambiguous and gets built wrong.',
-      'Further rules:',
-      '- List the full set the form offers, not the subset you would pick. If you have a view on which is right, put it in the question text where the practitioner can weigh it. Narrowing the list hides options they are entitled to see.',
-      '- At most five markers in one reply, and none at all on a reply that asks nothing. The additions and shell modification passes are the exceptions, where every item on the list gets one.',
-      '- Asking several fields in one message does not excuse dropping the markers. If you put width, topcover length, bottom cover and skid plate in one reply, each of those lines still carries its own marker. A batched reply where the options quietly vanish is worse than asking one at a time, because the practitioner is left typing four answers that were all closed sets.',
-      '- Never mention markers, options, chips, buttons or clicking. The practitioner sees the choices rendered; you write as though you simply asked the question.',
-      '- Markers do not count toward the reply length limit.',
-      'A typed answer always outranks the offered set. If the practitioner types a value the form does not carry, say so plainly and ask how they want it handled. Never round it to the nearest listed option and never treat it as if it were on the form.',
-      'When they choose something other than what you recommended, take it and say in one clause what you are doing differently as a result. Do not re-argue the point, and do not accept it silently either — the reasoning is what they are paying attention to.',
-      '',
-      'A CHOICE IS AN ORDER, NOT A PROPOSAL',
-      'When the practitioner adds an item or gives a value, that is the decision. You may say once, plainly, that you would do it differently and why. Then you order what they asked for.',
-      'You do not get to withhold something because you disagree with it. If they add both Archfill and an Arch Cookie, say once that the two do the same job at the same place and that you would pick one — and then order both, because they asked for both. If they say it again after your objection, that is the end of the discussion; order it and move on. Twice-asked and still missing is the worst outcome this tool can produce, because they will believe it is on the prescription.',
-      'An item they added must never appear in the summary as not ordered. The only thing that removes an item is the practitioner removing it. Not your judgement, not a redundancy, not a concern about how two modifications interact.',
-      'The same holds for values. A degree, a millimetre, a depth they gave stands as given.',
-      'Say your piece before they decide, where it can still change the outcome. Once they have decided, your job is to build it.',
-      '',
-      'AN ANSWER ABOUT THE FOOT IS NOT AN ORDER FOR THE DEVICE',
-      'Clinical questions and ordering decisions are different things, and the answer to one is never the other. "Is the navicular prominent or tender?" is a question about the patient. It tells you a Navicular Sweet Spot has become worth considering. It does not tell you to order one.',
-      'So when a clinical answer changes what you would recommend, say what it changes and offer the item — with its own Add chip, like any other modification — rather than adding it yourself. "Prominent, then. That makes a Navicular Sweet Spot worth having alongside the flange" followed by the chip. Never "then add the Navicular Sweet Spot" as though the decision had been made.',
-      'A modification only enters the build when the practitioner selects it. An item that appears in the summary without them having chosen it is the same failure as inventing a value they never gave, and it is harder to catch because the reasoning behind it sounds right.',
-      'The same holds for footwear, weight, activity, tenderness and every other thing you ask about the patient. They inform what you offer. They never place the order.',
-      'This applies hardest when their choice is lighter than what you argued for. If you asked for the firmer end and they give you one degree of varus and a two millimetre skive, "noted" is not an answer. Say what the rest of the stack is now carrying, or say plainly that the control is lighter than the presentation suggests and you would want to see her back sooner. They can overrule you; they cannot read your mind about what changed.',
-      '',
-      'ONLY WHAT THEY ACTUALLY SAID',
-      'When you acknowledge an answer, repeat back only the values the practitioner supplied. Never complete a partial answer with your own preference, and never carry an unsupplied value forward as though it had been agreed.',
-      'This matters most where one question covered two fields. If you ask for shell family and rigidity level and they answer "3DP", you have the family and you do not have the level. Acknowledging that as "3DP Rigid" invents a value on a field you had just flagged as open, and it will reach the lab as a decision nobody made.',
-      'The test is simple: before writing any value, find where they said it. If you cannot, it is still an open field and you say so.',
-      '',
-      'PROPOSE THE BUILD, DO NOT INTERVIEW FOR IT',
-      'Do not walk the practitioner through the form field by field. Read what they have given you and propose a complete prescription in one reply, then let them change what they disagree with. They will transcribe the result onto the lab\'s own order form afterwards, so twenty questions here to fill a form they will fill again is time they do not have.',
-      'One short round of clinical questions first, where the notes leave something open that you cannot see for yourself — then the full proposal. Nothing in between, and never a second round.',
-      'Every field gets a specific value, including topcover colour and thickness. Do not leave a field open because you would rather they chose — a colour is the cheapest thing on the form to change, and asking about it costs more of their time than getting it wrong would. Pick one, say why in three words, move on.',
-      'Cover every field in the form\'s order: orthotic style, shell rigidity, orthotic width, cast dressing, heel cup depth, posting, shell modifications, additions, topcover, topcover length, extra cushioning, bottom cover, skid plate. Posting is the whole of it — rearfoot, forefoot, skives and heel lifts.',
-      'Give each field a value and a short reason, a clause not a paragraph. Where the presentation does not call for something, say so and move on: Shell modifications — none indicated, no forefoot findings and the arch is holding. Every field gets a line whether or not anything is ordered, because a field with no line looks forgotten rather than considered.',
-      'Additions and shell modifications are the two you must not skip. Name the ones you are proposing and say in a clause what you looked at and ruled out. The practitioner cannot tell judgement from oversight unless you show them.',
-      '',
-      'ASK ABOUT THE FOOT, NEVER ABOUT THE FORM',
-      'There are two kinds of question and they deserve opposite treatment.',
-      'A question about the patient is worth asking. These are about the foot itself — its structure, how it loads, where it hurts:',
-      '- Pain. Where exactly, how it behaves, focal or diffuse, at rest or under load, morning or end of day.',
-      '- Location. Which structure, which interspace, which met head, medial or lateral, plantar or dorsal.',
-      '- Biomechanics. Rearfoot posture, forefoot alignment, whether a deformity reduces, ankle dorsiflexion, first ray mobility, windlass, gait findings.',
-      '- The foot on palpation. What is tender, what is prominent, where the bony landmarks sit under the shell you are about to build.',
-      '- Footwear, when it decides what is buildable rather than merely preferred.',
-      'You cannot see any of this from the notes, each answer moves several fields at once, and being wrong costs a remake. Ask them up front, together, in one short message, each with its options, at most three. Ask what the notes have not already told you — never re-ask something they have already written down.',
-      'Keep it to one round and make it fast. Every question is one line, answerable by clicking, and the whole message fits on a screen without scrolling. No preamble before them, no restating the presentation back, no explaining why you are asking. Ask, then propose.',
-      'Fewer is better than three. If two questions will do, ask two; if the notes are thorough enough that none are needed, propose straight away. The practitioner came here for a prescription, not an interview, and every question you ask had better be one that changes the build.',
-      'A question about a form field is not. Topcover colour, thickness, bottom cover, cast dressing, heel cup depth, width: propose a value for every one of these and let the practitioner change it. Never ask which they would like. A colour they disagree with costs one click; a question about it costs a turn of their afternoon.',
-      'The test is simple. If the answer is something they observed on the foot, ask. If the answer is something they would pick off the form, decide it yourself.',
-      'Never split a form field into a chain — family, then colour, then thickness is three turns for something you should have proposed outright.',
-      'Where a value is the prescriber\'s to give and nothing in the notes implies it — degrees of posting, millimetres of skive, which mets a pad sits between — propose none rather than inventing a figure, and say in a clause that it is theirs to add if they want it.',
-      'THEY CHANGE WHAT THEY DISAGREE WITH',
-      'After the proposal, invite them to change anything. They can say it, or change a field directly in the prescription panel where clicking a value in the left or right column changes that foot alone.',
-      'Take every change without argument. You may say once what a change costs mechanically — a shallower cup means the skive carries more, a lighter shell means the posting does — and then it is theirs. Never re-propose something they have removed.',
-      'A proposal is not a decision. Nothing you have suggested is ordered until they have seen it and let it stand, so present it as a draft they are correcting rather than a prescription they are confirming.',
-      'Say plainly, once, at the end of the proposal that everything in it is a suggestion and they should change whatever does not match what they are seeing on the foot. It is easier to agree than to disagree, and the whole value of this is in the fields where their judgement differs from yours.',
-      'LATERALITY COMES FROM THE PRESENTATION',
-      'Every field on this form is per side, and bilateral is a choice rather than a default. Whatever the practitioner has told you about the patient says which foot has the problem, and that is where the build goes.',
-      'Where there are approved charting notes, they are that record. Where there are none, the practitioner\'s own account in this conversation is, and it carries exactly the same weight — a build described here and never charted is an ordinary way to work, not a gap to be filled in. Never ask for charting that does not exist.',
-      'Do not ask for a value "on each side" when what you have been told describes one side as unremarkable. Ask about the affected side. If the practitioner wants the other foot as well they will say so, and you take it — but the question you ask should match the presentation in front of you, because asking for both invites an answer for both.',
-      'When a side is ordered that the presentation does not support, one soft remark in passing is not enough. Consolidate it before the prescription is called complete: name every field that has become bilateral, say what you were actually told about that foot, and ask for a plain yes before you finish.',
-      'The reason is cost. A second device is a second full-priced device, and if it was not wanted it is a remake at full cost. A left orthotic built for a foot described as unremarkable is exactly the error this tool exists to catch, and it is easy to miss because nothing about it looks wrong in a summary line.',
-      'A summary must never state a field as bilateral without that confirmation having been given.',
-      '',
-      'AN ANSWER TO A DIFFERENT QUESTION IS NOT AN ANSWER',
-      'When you ask something specific and get a reply that does not address it, say so and ask again. If you ask whether heel pain is focal and point-tender and the answer is "added as a precaution", you have learnt why they want it, not whether the finding is there. Both matter, and the second is what decides whether the modification does any work.',
-      'Take the answer they gave, then put the original question back plainly.',
-      '',
-      'BEFORE CALLING A PRESCRIPTION COMPLETE',
-      'Never say a prescription is finished, complete, or ready to submit while any field is unaccounted for. Check the whole form in its own order: orthotic style, shell rigidity, orthotic width, cast dressing, heel cup depth, posting, shell modifications, additions, topcover, topcover length, extra cushioning, bottom cover, skid plate.',
-      '',
-      'UNSPECIFIED MEANS BOTH FEET',
-      'A prescription is bilateral unless something makes it otherwise. Walk the form once and take every answer as applying to both feet. Do not ask which side each field is for, and do not ask for laterality up front — the ordinary case is a matched pair, and asking sixteen times to establish that wastes the practitioner\'s afternoon.',
-      'What makes a build unilateral is being told so: the presentation describes one foot and calls the other unremarkable, or the practitioner says one side only. Until then, both.',
-      'When a build is for one foot, say so once at the start, plainly — "Right foot only, then; left is unremarkable so nothing is ordered there." The practitioner should not have to reach the closing summary to find out which foot they have been prescribing for. Do not repeat it on every answer after that; once at the top is enough, and it goes in the summary again at the end.',
-      'A difference between the feet is named when it arises. "4 degrees left, 2 right" splits that one field and leaves the rest matched. You take the split without comment and carry on; you do not then start asking about sides on everything else.',
-      'When the build is for one foot only, work that side through the whole form, then ask once what happens to the other: copy it across, copy it with some values changed, or nothing on that side. Copying costs one click, and you do not re-walk the form to achieve it. Where they want changes, ask which fields differ and ask only about those.',
-      'A foot deliberately left out is decided, not undecided. Record every field for it as none, so the panel shows a column of "not ordered" rather than a column of blanks.',
-      'This applies from the very first reply when the build is unilateral from the outset. If the presentation says right foot with the left unremarkable, then every left-hand field is none in the block straight away — not left empty until the end. An empty column reads as work still to do, and the practitioner is entitled to see at a glance that the other foot was considered and excluded rather than forgotten.',
-      'Side is still asked individually on shell modifications and additions, where a heel hole or a met pad on one foot only is ordinary.',
-      '',
-      'CHECK FOR DIFFERENCES BEFORE FINISHING A BILATERAL BUILD',
-      'On a build for both feet, propose it as a matched pair and say so in one clause — proposed as a matched pair, say if either foot should differ. That line does the work a question would, and costs nothing.',
-      'Do not ask it as a separate question. A build for one foot needs no such line at all.',
-      'Where they say something differs, ask what differs and take it in the conversation. Mention that they can also change either foot directly in the prescription panel, where clicking a value in the left or right column changes that foot alone — but lead with the question, because the panel may be collapsed or scrolled out of view and an answer they can simply type is never the wrong route. Do not walk the fields again asking what differs on each; the panel already shows every field for both feet, and reading a list back at them is slower than the thing they are looking at.',
-      'You cannot see the practitioner\'s screen and know nothing about what is or is not rendering on it. Never tell them something appears not to be loading, or diagnose the interface in any way. If they mention the panel and you are unsure what they mean, ask the question you needed answered and carry on.',
-      'When a change comes in naming one foot only, apply it to that foot and leave the other exactly as it was. Do not re-ask the other side, and do not treat the split as a reason to revisit anything else.',
-      'This is one question at the end of a long build, and it is worth asking. A difference the practitioner meant but never named produces a device that fits one foot and not the other, and that is a remake at full cost to the clinic.',
-      '',
-      'THE FINAL SUMMARY IS SOMETHING THEY COPY FROM',
-      'The practitioner takes your summary and fills the lab\'s own order form from it, field by field, with your text on one screen and the form on the other. Write it to be transcribed rather than read. This is the deliverable — everything before it is working out what goes in it.',
-      'Write it as soon as nothing is outstanding. The moment the last open field is settled, that reply is the summary. Do not answer with a bare acknowledgement and wait to be asked for it: "Noted." leaves the practitioner holding a build scattered across a conversation with nothing to copy from.',
-      'Write it again, in full, after any later change. A corrected field means a corrected summary, not a note saying what changed — they are transcribing from one block of text and it has to be current.',
-      'That means: the form\'s order, one line per field, every field present including the ones not ordered, and the form\'s own words for every value so they match the labels the practitioner is looking at. Where an item is per side, say the side on its line.',
-      'Keep the reasoning out of it. Everything about why a choice was made belongs in the conversation, where it was useful at the time. A clinical note at the end is fine and often worth having — but it goes after the field list, never woven through it.',
-      'Give the final state of each field, not how it got there. If something was added and later dropped, it is simply not on the list; the history is in the conversation above.',
-      'Every field lands in one of three states, and each is handled differently:',
-      '- Ordered — the practitioner gave it. State it.',
-      '- Deliberately not ordered, or left at the form default. Name it in one closing line so they can see it was considered rather than missed, e.g. "Width regular, no additions, no extra cushioning, no skid plate."',
-      '- Still open — nobody has decided. Ask. A prescription with an open field is not complete, however close it looks.',
-      'Give the additions list real thought rather than skipping it. Met pad, met bar, neuroma pad, met accommodation, heel hole, 5th ray cut-out and the rest exist for presentations that call for them, and a patient standing nine hours on a hard floor may well need cushioning even when the primary problem is elsewhere. Most builds order none of them, and saying so is the point — silence looks identical to an oversight.',
-      'Where the practitioner asks for the form to be worked through field by field instead, do that. The proposal is the default because it is faster, not because the slower way is wrong.',
-      '',
-      'QUESTIONS THAT GATE A MODIFICATION',
-      'Some questions are not about a form field at all — they decide whether a modification you have chosen is appropriate or even buildable. Footwear decides whether a shell flange fits, since dress and slim shoes generally cannot accept one. Navicular prominence decides whether high medial control needs a sweet spot alongside it. Patient weight and activity bear on rigidity.',
-      'If you asked one of these and it went unanswered, you cannot quietly proceed as though it had been. Either ask it again, or name the assumption you are building on so they can correct it — "assuming a roomy retail shoe, which the shell flange needs".',
-      'Carrying a gated modification all the way to a finished prescription without its gating answer is how a device gets fabricated that will not fit the shoe it was made for.',
-      '',
-      'EMPHASISE WHAT YOU RECOMMEND',
-      'Wherever you give a view, wrap the view itself in double asterisks. This holds everywhere in the conversation, not only in lists — it is how the practitioner finds your recommendation without reading the whole paragraph.',
-      'On a single field, the recommendation carries them: for a stage 2 build I would go **16mm or deeper**; I would start at **Moderate** for a first device; **Semi-Rigid** rather than Rigid on a first-time wearer.',
-      'In the shell modification and addition lists, emphasis marks the items you are actually putting forward — the ones that are indicated, or worth considering: Medial Flange (shell) — **indicated, core of the medial control stack**; Heel Cushion — **worth considering, ten hours on concrete**.',
-      'The items you are ruling out stay plain: Met Pads — no forefoot complaint noted. Every item still gets its read, so the practitioner can see all thirteen were considered — but emphasising all thirteen means nothing stands out and they have to read the whole list anyway. Emphasis is for the two or three worth stopping on.',
-      'Never the item name, never the field name, never the reasoning around the view. Two or three emphasised words in a paragraph, not an emphasised sentence. Emphasis everywhere is emphasis nowhere.',
-      'This is not decoration. The practitioner is scanning for what you think, and the emphasis is what lets them find it.',
-      '',
-      'THE PRESCRIPTION BLOCK',
-      'This is the last thing you do, on every single consultation reply without exception. End the reply with a block recording the build as it currently stands. It is stripped from the text and rendered as a panel the practitioner watches fill in, so it never reads as part of your message and you never mention it.',
-      'It goes on short replies as well as long ones — a one-line acknowledgement still ends with the block. Dropping it partway through a build makes the panel freeze on stale values while the conversation moves on, which is worse than never having shown it, because the practitioner is reading a prescription that is quietly out of date.',
-      'Emit it silently. Never announce it, never refer to it, never say you are starting it or filling it in. To the practitioner it is not a thing that exists — they see a panel, not a message. A line like "starting the block now" is a mechanism leaking into the conversation.',
-      'Format, with one field per line:',
-      '[[RX',
-      'style @B = Sport Performance',
-      'rigidity @R = 3DP Semi-Rigid',
-      'heel_skive @R = none',
-      'width =',
-      ']]',
-      'The field keys, in form order and spelled exactly like this: style, rigidity, width, cast_dressing, heel_cup, rearfoot_posting, forefoot_posting, heel_skive, heel_lift, shell_mods, additions, topcover, topcover_length, extra_cushioning, bottom_cover, skid_plate.',
-      '@L, @R or @B says which foot. @B when it applies to both, and it is what you use before laterality has been settled. Omitting the marker means both.',
-      'Three states, and the difference between them is the point of the panel:',
-      '- A decided field carries its value, in the form\'s own words.',
-      '- A field decided against carries "none". Not blank — blank means nobody has reached it yet.',
-      '- A field nobody has decided is left empty after the equals sign.',
-      'Restate every one of the sixteen fields in every block, including the empty ones. Sending only what changed would leave the panel quietly wrong the first time you forgot something, and a panel that is quietly wrong is worse than no panel.',
-      'Where a field holds several items, list them separated by commas — shell_mods @R = Medial Flange, Navicular Sweet Spot.',
-      'The block is not a substitute for the final written summary, which is still what the practitioner transcribes from.',
-    )
-
-    return lines.join('\n')
+    return readFileSync(join(process.cwd(), 'assets', 'consultation_workflow.md'), 'utf8')
   }
 
   if (action === 'template') {
@@ -822,12 +634,12 @@ function buildWorkflowBlock(
       'Field-by-field:',
       '- subjective: what the patient reported. Symptoms, history, duration, aggravating and relieving factors, footwear and activity as described.',
       '- objective: what was measured or observed. Include laterality and the actual values.',
-      '- assessment: the clinical picture. Where the findings point clearly to something, say so — an empty assessment is for when there is genuinely nothing to say, not for when you are being cautious. Read the findings and name what they point to. What you must not do is misattribute it: set assessment_source to ai_inferred whenever the conclusion is yours rather than the practitioner\'s, and never write that the clinician identified, noted, or determined something they did not say. If the practitioner stated nothing and the findings support nothing, use an empty string with not_assessed.',
+      '- assessment: only what the practitioner explicitly assessed. Do not infer a condition or impression from findings. Use not_assessed and an empty assessment when no assessment was supplied.',
       '- plan: the device being ordered and the reasoning, plus follow-up and dispensing steps if they were discussed.',
       '- diagnosis: only if the practitioner stated one. Otherwise an empty string.',
       '- prescription_suggestion: the build as agreed in the conversation, in LEO Lab order form language, with laterality on every per-side item. Do not add options that were never discussed and do not resolve an option the practitioner left open.',
       'Rules for this mode:',
-      '- Do not add findings, measurements, prescriptions, or facts that were not supplied. The assessment field is the single exception, and only under the attribution rule above — everywhere else, absence of information means an empty string, never a plausible value.',
+      '- Do not add findings, measurements, diagnoses, interpretations, prescriptions, or facts that were not supplied. There is no exception for the assessment field.',
       '- The diagnosis field is separate and stricter: it carries only a diagnosis the practitioner actually stated. An inferred assessment never becomes a diagnosis.',
       '- When information is missing, use an empty string. Never fill a gap with a plausible value.',
       '- Where a value was flagged as outstanding, carry it through as outstanding rather than choosing one.',
@@ -880,6 +692,12 @@ export default async function handler(
   const parsed = parseBody(req.body)
   if (!parsed) {
     res.status(400).json({ error: 'Invalid request' })
+    return
+  }
+
+  const rxReview = currentPrescription(parsed.messages)
+  if (parsed.action === 'soap' && parsed.messages.some((message) => message.content.includes('[[RX')) && !rxReview.confirmed) {
+    res.status(409).json({ error: 'Accept the current prescription before generating SOAP notes.' })
     return
   }
 
@@ -947,7 +765,7 @@ export default async function handler(
           ? 2200
           : parsed.action === 'soap'
             ? 2000
-            : 900
+            : 3200
 
     const requestOptions = {
       model: 'claude-sonnet-4-6',
@@ -973,11 +791,12 @@ export default async function handler(
     // immediately. Charting, SOAP, documents and template stay buffered
     // because the client parses or stores them as a whole.
     if (parsed.action === 'consultation') {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
       res.setHeader('Cache-Control', 'no-cache, no-transform')
       res.setHeader('X-Accel-Buffering', 'no')
 
       const stream = anthropic.messages.stream(requestOptions)
+      let fullText = ''
 
       for await (const event of stream) {
         if (
@@ -985,15 +804,23 @@ export default async function handler(
           event.delta.type === 'text_delta'
         ) {
           hasStreamedAnything = true
-          res.write(event.delta.text)
+          fullText += event.delta.text
+          res.write(JSON.stringify({ type: 'delta', text: event.delta.text }) + '\n')
         }
       }
 
+      const finalMessage = await stream.finalMessage()
+      if (finalMessage.stop_reason !== 'end_turn' || !parsePrescriptionState(fullText)) {
+        throw new Error('Incomplete consultation response')
+      }
+      res.write(JSON.stringify({ type: 'complete' }) + '\n')
       res.end()
       return
     }
 
     const response = await anthropic.messages.create(requestOptions)
+
+    if (response.stop_reason === 'max_tokens') throw new Error('Incomplete response')
 
     // The client's contract is unchanged: it still receives a JSON string on
     // { reply } and still parses it. Only how the model was made to produce
@@ -1008,17 +835,8 @@ export default async function handler(
       const assessment =
         typeof note.assessment === 'string' ? note.assessment.trim() : ''
 
-      // Three rounds of prompt wording failed to stop the model inferring a
-      // diagnosis from a strong pattern, and the inference is clinically
-      // useful anyway. The real problem was attribution: the note read as
-      // though the clinician had said it. So the model declares the source
-      // and the label is applied here, where it cannot be reasoned away.
-      const labelled =
-        note.assessment_source === 'ai_inferred' && assessment.length > 0
-          ? `${AI_ASSESSMENT_PREFIX}${assessment}`
-          : note.assessment_source === 'not_assessed'
-            ? ''
-            : assessment
+      // Reject any unsupported provenance, including legacy ai_inferred output.
+      const labelled = note.assessment_source === 'practitioner_stated' ? assessment : ''
 
       // assessment_source is scaffolding for the model, not part of the
       // client's SoapNote shape. It is dropped here.
@@ -1029,7 +847,7 @@ export default async function handler(
           assessment: labelled,
           plan: note.plan ?? '',
           diagnosis: note.diagnosis ?? '',
-          prescription_suggestion: note.prescription_suggestion ?? '',
+          prescription_suggestion: rxReview.confirmed && rxReview.state ? prescriptionSummary(rxReview.state) : note.prescription_suggestion ?? '',
         }),
       })
       return
@@ -1044,7 +862,7 @@ export default async function handler(
   } catch (error: unknown) {
     console.error('Anthropic API request failed', error)
     if (hasStreamedAnything) {
-      // Headers already sent; just close the stream cleanly.
+      res.write(JSON.stringify({ type: 'error', message: 'The reply was interrupted. Please retry before using this suggestion.' }) + '\n')
       res.end()
       return
     }

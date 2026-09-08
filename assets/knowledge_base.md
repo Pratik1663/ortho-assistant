@@ -174,8 +174,9 @@ when it is ordered.
 
 ### F.9 — ORTHOTIC RIGIDITY
 
-One choice from three families. Name the family and the level together — that is
-the box the prescriber ticks, so that is the language to use.
+The form offers three families. In consultation, suggest the rigidity level alone
+for routine Poly/3DP builds; fabrication is lab-side unless the practitioner
+explicitly specifies a family. Preserve a family they specify.
 
 | Family | Levels |
 |---|---|
@@ -183,9 +184,9 @@ the box the prescriber ticks, so that is the language to use.
 | **3DP** | Flexible · Semi-Flexible · Semi-Rigid · Rigid |
 | **Premium** | 2.3mm XT-Carbon · 2.6mm XT-Carbon · 1.5mm TL2100 |
 
-Say "3DP Semi-Rigid" or "Poly Rigid." On the Premium shells the thickness is part
-of the product name, so quoting it is correct — but carbon is not offered in any
-other thickness.
+Suggest "Semi-Rigid" or "Rigid" without asking the practitioner to choose a
+fabrication process. For Premium shells the thickness is part of the product
+name, so quoting it is correct; carbon is not offered in other thicknesses.
 
 **Raw polymers are lab-side detail, not menu items.** The 3DP shells are printed in
 PA12 and the Poly shells are polypropylene, but neither is a box on the form and

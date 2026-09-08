@@ -3,6 +3,7 @@ import {
   CAST_DRESSING_OPTIONS,
   HEEL_CUP_OPTIONS,
   RIGIDITY_LEVELS,
+  PREMIUM_SHELL_OPTIONS,
   STYLE_OPTIONS,
   TOPCOVER_LENGTH_OPTIONS,
   WIDTH_OPTIONS,
@@ -32,7 +33,7 @@ import {
  */
 export const FIELD_EDIT_OPTIONS: Record<string, string[]> = {
   style: STYLE_OPTIONS,
-  rigidity: RIGIDITY_LEVELS,
+  rigidity: [...RIGIDITY_LEVELS, ...PREMIUM_SHELL_OPTIONS],
   width: WIDTH_OPTIONS,
   cast_dressing: CAST_DRESSING_OPTIONS,
   heel_cup: HEEL_CUP_OPTIONS,
@@ -102,9 +103,8 @@ const normalise = (value: string) => value.toLowerCase().replace(/[\s"'·°]/g, 
  * skives, topcover and the list fields hold free text by design and are left
  * alone rather than flagged wrongly.
  *
- * Matching is lenient — a value counts as valid if it contains a known option,
- * so "3DP Semi-Rigid" passes against the rigidity levels. The aim is to catch
- * something that is not on the form at all, not to police phrasing.
+ * Match a complete canonical value after normalising whitespace and punctuation.
+ * Rigidity may carry an explicit Poly, 3DP or Premium fabrication prefix.
  */
 function isKnownValue(key: string, value: string): boolean {
   const options = FIELD_EDIT_OPTIONS[key]
@@ -112,10 +112,9 @@ function isKnownValue(key: string, value: string): boolean {
     return true
   }
   const candidate = normalise(value)
-  return options.some((option) => {
-    const known = normalise(option)
-    return candidate === known || candidate.includes(known)
-  })
+  // Only the two supported fabrication prefixes are allowed on rigidity.
+  const comparable = key === 'rigidity' ? candidate.replace(/^(3dp|poly|premium)/, '') : candidate
+  return options.some((option) => comparable === normalise(option))
 }
 
 function classify(key: string, raw: string): FieldSide {
@@ -142,32 +141,36 @@ export function hasPrescriptionState(content: string): boolean {
 
 /**
  * Read the prescription out of an assistant message. Returns null when the
- * message carries no block, so the caller can keep showing the last one it had
- * rather than blanking the panel mid-conversation.
+ * message carries no complete snapshot. Callers must not present an older
+ * snapshot as current after a failed reply or a new practitioner message.
  */
 export function parsePrescriptionState(content: string): PrescriptionState | null {
   const block = content.match(RX_BLOCK)
+  if ((content.match(/\[\[RX\b/g) ?? []).length !== 1) return null
   if (!block) {
     return null
   }
 
   const state = blank()
+  const seen = new Set<string>()
 
   for (const line of block[1].split('\n')) {
     const match = line.trim().match(RX_LINE)
-    if (!match) {
-      continue
-    }
+    if (!line.trim()) continue
+    if (!match) return null
 
     const [, rawKey, rawSide, rawValue] = match
     const key = rawKey.toLowerCase()
-    if (!(key in state)) {
-      continue
-    }
+    if (!Object.prototype.hasOwnProperty.call(state, key)) return null
 
     const side = classify(key, rawValue)
     const which = (rawSide ?? 'B').toUpperCase()
 
+    for (const foot of which === 'B' ? ['L', 'R'] : [which]) {
+      const id = `${key}:${foot}`
+      if (seen.has(id)) return null
+      seen.add(id)
+    }
     if (which === 'L' || which === 'B') {
       state[key].left = { ...side }
     }
@@ -176,7 +179,7 @@ export function parsePrescriptionState(content: string): PrescriptionState | nul
     }
   }
 
-  return state
+  return seen.size === RX_FIELDS.length * 2 ? state : null
 }
 
 /**
@@ -196,7 +199,7 @@ export function countSettled(state: PrescriptionState): {
 
   for (const field of RX_FIELDS) {
     const entry = state[field.key]
-    if (entry.left.status !== 'open' || entry.right.status !== 'open') {
+    if (['set', 'none'].includes(entry.left.status) && ['set', 'none'].includes(entry.right.status)) {
       settled += 1
     }
     if (entry.left.status === 'set') {
@@ -208,4 +211,41 @@ export function countSettled(state: PrescriptionState): {
   }
 
   return { settled, total: RX_FIELDS.length, left, right }
+}
+
+/** Explicit acceptance is a local action, never a model-generated status. */
+export const ACCEPT_PRESCRIPTION = 'I accept the current suggested prescription as displayed.'
+type RxMessage = { role: 'user' | 'assistant'; content: string }
+
+export function prescriptionSummary(state: PrescriptionState): string {
+  return RX_FIELDS.map(({ key, label }) => {
+    const { left, right } = state[key]
+    const describe = (side: FieldSide) => side.status === 'open' ? 'Open' : side.value
+    return `${label}: Left — ${describe(left)}; Right — ${describe(right)}`
+  }).join('\n')
+}
+
+export function canAcceptPrescription(state: PrescriptionState): boolean {
+  return countSettled(state).settled === RX_FIELDS.length &&
+    RX_FIELDS.some(({ key }) => state[key].left.status === 'set' || state[key].right.status === 'set')
+}
+
+export function acceptanceReply(content: string): string | null {
+  const state = parsePrescriptionState(content)
+  if (!state || !canAcceptPrescription(state)) return null
+  return `Practitioner-confirmed prescription\n${prescriptionSummary(state)}\n\n${content.match(RX_BLOCK)![0]}`
+}
+
+export function currentPrescription(messages: RxMessage[]): {
+  state: PrescriptionState | null; confirmed: boolean
+} {
+  const last = messages[messages.length - 1]
+  const state = last?.role === 'assistant' ? parsePrescriptionState(last.content) : null
+  // Compare the deterministic summary against the exact snapshot accepted.
+  const request = messages[messages.length - 2]
+  const previous = messages[messages.length - 3]
+  const confirmed = Boolean(state && request?.role === 'user' &&
+    request.content === ACCEPT_PRESCRIPTION && previous?.role === 'assistant' &&
+    acceptanceReply(previous.content) === last.content)
+  return { state, confirmed }
 }

@@ -17,7 +17,7 @@ import DispensingView from './DispensingView'
 import Header from './Header'
 import MessageList, { type OptionSelection } from './MessageList'
 import PrescriptionPanel, { type FieldEdit } from './PrescriptionPanel'
-import { parsePrescriptionState } from '../prescriptionState'
+import { ACCEPT_PRESCRIPTION, currentPrescription } from '../prescriptionState'
 import TemplateManager from './TemplateManager'
 import SoapReview from './SoapReview'
 import './DoctorView.css'
@@ -163,23 +163,7 @@ export default function DoctorView({
   const [stagedOption, setStagedOption] = useState<StagedOption | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
 
-  // The newest reply that carried a prescription block wins. Walking backwards
-  // rather than reading the last message means a reply without one — a
-  // clarifying question, say — leaves the panel showing the last known build
-  // instead of blanking it.
-  const prescription = (() => {
-    const messages = currentConversation?.messages ?? []
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      if (messages[i].role !== 'assistant') {
-        continue
-      }
-      const parsed = parsePrescriptionState(messages[i].content)
-      if (parsed) {
-        return parsed
-      }
-    }
-    return null
-  })()
+  const { state: prescription, confirmed: prescriptionConfirmed } = currentPrescription(currentConversation?.messages ?? [])
 
   // A change made in the panel is sent as an ordinary message, so LEOPA sees it
   // the same way as anything typed and the conversation stays the record.
@@ -562,6 +546,8 @@ export default function DoctorView({
                       disabled={pending}
                       onEdit={handleFieldEdit}
                       state={prescription}
+                      confirmed={prescriptionConfirmed}
+                      onAccept={() => onSend(ACCEPT_PRESCRIPTION, [])}
                     />
                   )}
                   <MessageList
@@ -577,7 +563,8 @@ export default function DoctorView({
                         {!currentConversation.soapNote ? (
                           <button
                             className="workflow-primary"
-                            disabled={pending}
+                            disabled={pending || (currentConversation.messages.length > 0 && !prescriptionConfirmed)}
+                            title={!prescriptionConfirmed ? 'Accept the suggested prescription first' : undefined}
                             onClick={onGenerateSoap}
                             type="button"
                           >
