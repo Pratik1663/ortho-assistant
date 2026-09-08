@@ -8,7 +8,7 @@ import {
   TOPCOVER_LENGTH_OPTIONS,
   WIDTH_OPTIONS,
   YES_NO_OPTIONS,
-} from './formOptions'
+} from './formOptions.js'
 
 /**
  * The prescription as a structure rather than a conversation.

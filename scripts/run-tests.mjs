@@ -6,7 +6,7 @@ try {
   for (const file of files) {
     const output = ts.transpileModule(readFileSync(file, 'utf8'), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX }
-    }).outputText.replace(/require\("(\.[^"]+)"\)/g, 'require("$1.cjs")')
+    }).outputText.replace(/require\("(\.[^"]+?)(?:\.js)?"\)/g, 'require("$1.cjs")')
     const target = `.test-build/${file.replace(/\.tsx?$/, '.cjs')}`
     mkdirSync(target.slice(0, target.lastIndexOf('/')), { recursive: true })
     writeFileSync(target, output)

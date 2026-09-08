@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parsePrescriptionState, currentPrescription, prescriptionSummary } from '../src/prescriptionState'
+import { parsePrescriptionState, currentPrescription, prescriptionSummary } from '../src/prescriptionState.js'
 
 type ChatMessage = {
   role: 'user' | 'assistant'
