@@ -24,7 +24,38 @@ interface PrescriptionPanelProps {
   disabled?: boolean
 }
 
-function Cell({ side }: { side: FieldSide }) {
+function Cell({
+  side,
+  onClick,
+  label,
+}: {
+  side: FieldSide
+  onClick?: () => void
+  label?: string
+}) {
+  const body = renderValue(side)
+  if (!onClick) {
+    return body
+  }
+  return (
+    <span
+      aria-label={label}
+      className="rx-cell-hit"
+      onClick={(event) => {
+        // The row toggles the editor; a cell click targets one foot, so it
+        // must not also fire the row handler.
+        event.stopPropagation()
+        onClick()
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      {body}
+    </span>
+  )
+}
+
+function renderValue(side: FieldSide) {
   if (side.status === 'open') {
     // Deliberately empty rather than dashed. An unanswered field should read as
     // unanswered at a glance; that is the whole reason the panel exists.
@@ -63,6 +94,8 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
   // worth seeing continuously; the rows are for when you want to check.
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
+  // Which foot the open editor will change. Null means the field as a whole.
+  const [target, setTarget] = useState<'L' | 'R' | null>(null)
   const { settled, total, left, right } = countSettled(state)
   const flagged = RX_FIELDS.filter(
     (field) =>
@@ -72,14 +105,21 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
 
   const editable = Boolean(onEdit) && !disabled
 
-  const choose = (key: string, label: string, value?: string) => {
+  /**
+   * Which foot an edit applies to.
+   *
+   * Clicking the row means the field as a whole: both feet when they match,
+   * and the panel says so. Clicking a single cell means that foot only, which
+   * is how one side is changed without disturbing the other — the case that
+   * matters when a matched pair needs to come apart.
+   */
+  const choose = (key: string, label: string, value?: string, side?: 'L' | 'R') => {
     const entry = state[key]
-    // Only name a side when the feet currently differ. On a matched pair the
-    // change applies to both, and naming one would quietly split them.
     const split =
       entry.left.status !== entry.right.status || entry.left.value !== entry.right.value
-    onEdit?.({ key, label, side: split ? 'R' : undefined, value })
+    onEdit?.({ key, label, side: side ?? (split ? 'R' : undefined), value })
     setEditing(null)
+    setTarget(null)
   }
 
   return (
@@ -129,28 +169,61 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
                   }${isEditing ? ' editing' : ''}`}
                   onClick={
                     editable
-                      ? () =>
+                      ? () => {
+                          setTarget(null)
                           setEditing((current) =>
                             current === field.key ? null : field.key,
                           )
+                        }
                       : undefined
                   }
                   role={editable ? 'button' : undefined}
                   tabIndex={editable ? 0 : undefined}
                 >
                   <span className="rx-label">{field.label}</span>
-                  <Cell side={entry.left} />
-                  <Cell side={entry.right} />
+                  <Cell
+                    label={`${field.label}, left foot`}
+                    onClick={
+                      editable
+                        ? () => {
+                            setEditing(field.key)
+                            setTarget('L')
+                          }
+                        : undefined
+                    }
+                    side={entry.left}
+                  />
+                  <Cell
+                    label={`${field.label}, right foot`}
+                    onClick={
+                      editable
+                        ? () => {
+                            setEditing(field.key)
+                            setTarget('R')
+                          }
+                        : undefined
+                    }
+                    side={entry.right}
+                  />
                 </div>
 
                 {isEditing && (
                   <div className="rx-edit">
+                    <span className="rx-edit-scope">
+                      {target === 'L'
+                        ? 'Left foot'
+                        : target === 'R'
+                          ? 'Right foot'
+                          : 'Both feet'}
+                    </span>
                     {options ? (
                       options.map((option) => (
                         <button
                           className="option-chip"
                           key={option}
-                          onClick={() => choose(field.key, field.label, option)}
+                          onClick={() =>
+                            choose(field.key, field.label, option, target ?? undefined)
+                          }
                           type="button"
                         >
                           {option}
@@ -159,7 +232,9 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
                     ) : (
                       <button
                         className="option-chip"
-                        onClick={() => choose(field.key, field.label)}
+                        onClick={() =>
+                          choose(field.key, field.label, undefined, target ?? undefined)
+                        }
                         type="button"
                       >
                         Change {field.label.toLowerCase()}

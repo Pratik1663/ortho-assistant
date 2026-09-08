@@ -184,7 +184,15 @@ export default function DoctorView({
   // A change made in the panel is sent as an ordinary message, so LEOPA sees it
   // the same way as anything typed and the conversation stays the record.
   const handleFieldEdit = (edit: FieldEdit) => {
-    const side = edit.side === 'R' ? ' on the right' : edit.side === 'L' ? ' on the left' : ''
+    // Naming the foot explicitly matters most when a matched pair is coming
+    // apart: "on the right foot only" has to be unambiguous, or the change
+    // gets applied to both and the asymmetry is lost.
+    const side =
+      edit.side === 'R'
+        ? ' on the right foot only'
+        : edit.side === 'L'
+          ? ' on the left foot only'
+          : ''
     const message = edit.value
       ? `Change ${edit.label.toLowerCase()}${side} to ${edit.value}.`
       : `I want to change ${edit.label.toLowerCase()}${side}.`
