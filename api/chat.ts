@@ -811,6 +811,7 @@ export default async function handler(
 
       const finalMessage = await stream.finalMessage()
       if (finalMessage.stop_reason !== 'end_turn' || !parsePrescriptionState(fullText)) {
+        console.error('LEOPA incomplete:', { stop_reason: finalMessage.stop_reason, rxParsed: Boolean(parsePrescriptionState(fullText)), tail: fullText.slice(-700) })
         throw new Error('Incomplete consultation response')
       }
       res.write(JSON.stringify({ type: 'complete' }) + '\n')
