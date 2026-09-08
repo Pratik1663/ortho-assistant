@@ -20,7 +20,7 @@ For closed-set questions use [[OPTIONS Field: A | B | C]] after the question. Us
 ## Prescription snapshot
 End every consultation reply with exactly one silent [[RX ... ]] block. Restate all sixteen keys, even during initial questions (blank values for unknowns). The block represents current suggestions, not acceptance. Never emit an acceptance marker or fabricate a practitioner confirmation.
 Keys in order: style, rigidity, width, cast_dressing, heel_cup, rearfoot_posting, forefoot_posting, heel_skive, heel_lift, shell_mods, additions, topcover, topcover_length, extra_cushioning, bottom_cover, skid_plate.
-Syntax: key @B = value. Use @B for matching feet, or separate @L and @R lines for differences. Every key must cover both feet. Blank after = means open. none means no item proposed. An excluded foot uses none, never blanks. List multiple modifications separated by commas. Do not use markdown inside the block.
+Syntax: key @B = value. Use @B for matching feet, or separate @L and @R lines for differences. Every key must cover both feet, on exactly one line each. Blank after = means open. none means no item proposed. An excluded foot uses none, never blanks. List multiple modifications on one line separated by commas. Never repeat a key for the same side — one line per key per side, always. Do not use markdown inside the block.
 Example lines (the actual block must include ALL keys):
 [[RX
 style @B = Sport Performance

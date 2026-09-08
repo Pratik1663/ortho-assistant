@@ -144,3 +144,15 @@ test('panel labels proposals separately and allows acceptance with open values',
   assert.ok(confirmed.includes('Accepted by practitioner'))
   assert.ok(!confirmed.includes('>Accept prescription<'))
 })
+test('a list field split across lines merges; other repeats still fail closed', () => {
+  const split = proposal.replace(
+    'additions @B = none',
+    'additions @B = Heel Cushion 1/8"\nadditions @B = Arch Cookie/D-Pad 1/16"',
+  )
+  const parsed = parse(split)
+  assert.ok(parsed)
+  assert.equal(parsed.additions.left.value, 'Heel Cushion 1/8", Arch Cookie/D-Pad 1/16"')
+  assert.equal(parsed.additions.right.value, 'Heel Cushion 1/8", Arch Cookie/D-Pad 1/16"')
+  // A single-value field repeated is still an error, not a continuation.
+  assert.equal(parse(proposal.replace('heel_cup @B = 16mm', 'heel_cup @B = 16mm\nheel_cup @B = 18mm')), null)
+})

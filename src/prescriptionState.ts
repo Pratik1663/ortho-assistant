@@ -144,6 +144,13 @@ export function hasPrescriptionState(content: string): boolean {
  * message carries no complete snapshot. Callers must not present an older
  * snapshot as current after a failed reply or a new practitioner message.
  */
+/**
+ * Fields that legitimately hold several items, and so may arrive across more
+ * than one line. Everything else holds exactly one value and a repeat is an
+ * error rather than a continuation.
+ */
+const MERGEABLE_FIELDS = new Set(['shell_mods', 'additions'])
+
 export function parsePrescriptionState(content: string): PrescriptionState | null {
   const block = content.match(RX_BLOCK)
   if ((content.match(/\[\[RX\b/g) ?? []).length !== 1) return null
@@ -166,16 +173,36 @@ export function parsePrescriptionState(content: string): PrescriptionState | nul
     const side = classify(key, rawValue)
     const which = (rawSide ?? 'B').toUpperCase()
 
-    for (const foot of which === 'B' ? ['L', 'R'] : [which]) {
+    // A field named twice for the same foot is usually a list split across two
+    // lines — "additions @B = Met Pad" then "additions @B = Heel Cushion". That
+    // is unambiguous, and discarding an otherwise sound prescription over a
+    // formatting slip would be a harsh failure. So repeats of a list-bearing
+    // field are merged. A repeat that contradicts itself, or repeats a field
+    // that can only hold one value, still fails closed.
+    const feet = which === 'B' ? ['L', 'R'] : [which]
+    const mergeable = MERGEABLE_FIELDS.has(key)
+
+    for (const foot of feet) {
       const id = `${key}:${foot}`
-      if (seen.has(id)) return null
+      if (seen.has(id) && !mergeable) return null
       seen.add(id)
     }
+
+    const merge = (existing: FieldSide): FieldSide => {
+      if (existing.status !== 'set' || side.status !== 'set') {
+        return { ...side }
+      }
+      if (existing.value === side.value) {
+        return existing
+      }
+      return { status: 'set', value: `${existing.value}, ${side.value}` }
+    }
+
     if (which === 'L' || which === 'B') {
-      state[key].left = { ...side }
+      state[key].left = mergeable ? merge(state[key].left) : { ...side }
     }
     if (which === 'R' || which === 'B') {
-      state[key].right = { ...side }
+      state[key].right = mergeable ? merge(state[key].right) : { ...side }
     }
   }
 
