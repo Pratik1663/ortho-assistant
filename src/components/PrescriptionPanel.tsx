@@ -30,6 +30,21 @@ function Cell({ side }: { side: FieldSide }) {
     // unanswered at a glance; that is the whole reason the panel exists.
     return <span className="rx-cell open" aria-label="Not yet decided" />
   }
+  if (side.status === 'invalid') {
+    // A value that is not on the form is worse than a missing one, because it
+    // reads as decided. Marked rather than hidden, so it can be corrected.
+    return (
+      <span
+        className="rx-cell invalid"
+        title="Not an option on the LEO Lab form — check this before ordering"
+      >
+        {side.value}
+        <span aria-hidden="true" className="rx-flag">
+          !
+        </span>
+      </span>
+    )
+  }
   return <span className={`rx-cell ${side.status}`}>{side.value}</span>
 }
 
@@ -49,6 +64,11 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const { settled, total, left, right } = countSettled(state)
+  const flagged = RX_FIELDS.filter(
+    (field) =>
+      state[field.key].left.status === 'invalid' ||
+      state[field.key].right.status === 'invalid',
+  ).length
 
   const editable = Boolean(onEdit) && !disabled
 
@@ -78,6 +98,11 @@ function PrescriptionPanel({ state, onEdit, disabled }: PrescriptionPanelProps) 
           <span className={`rx-side-count${left > 0 ? ' active' : ''}`}>L {left}</span>
           <span className={`rx-side-count${right > 0 ? ' active' : ''}`}>R {right}</span>
         </span>
+        {flagged > 0 && (
+          <span className="rx-panel-flag">
+            {flagged} to check
+          </span>
+        )}
         <span aria-hidden="true" className="rx-panel-chevron">
           {open ? '▾' : '▸'}
         </span>

@@ -61,7 +61,7 @@ export const RX_FIELDS: { key: string; label: string; perSide: boolean }[] = [
   { key: 'skid_plate', label: 'Skid plate', perSide: true },
 ]
 
-export type FieldStatus = 'open' | 'set' | 'none'
+export type FieldStatus = 'open' | 'set' | 'none' | 'invalid'
 
 export interface FieldSide {
   status: FieldStatus
@@ -91,7 +91,34 @@ function blank(): PrescriptionState {
   return state
 }
 
-function classify(raw: string): FieldSide {
+const normalise = (value: string) => value.toLowerCase().replace(/[\s"'·°]/g, '')
+
+/**
+ * Check a value against the form's own list where one exists.
+ *
+ * The panel is meant to be the thing the practitioner trusts at a glance, and
+ * a value the model invented would otherwise render exactly as confidently as
+ * one they chose. Only fields with a single closed set are checked; posting,
+ * skives, topcover and the list fields hold free text by design and are left
+ * alone rather than flagged wrongly.
+ *
+ * Matching is lenient — a value counts as valid if it contains a known option,
+ * so "3DP Semi-Rigid" passes against the rigidity levels. The aim is to catch
+ * something that is not on the form at all, not to police phrasing.
+ */
+function isKnownValue(key: string, value: string): boolean {
+  const options = FIELD_EDIT_OPTIONS[key]
+  if (!options) {
+    return true
+  }
+  const candidate = normalise(value)
+  return options.some((option) => {
+    const known = normalise(option)
+    return candidate === known || candidate.includes(known)
+  })
+}
+
+function classify(key: string, raw: string): FieldSide {
   const value = raw.trim()
   if (value.length === 0) {
     return { status: 'open', value: '' }
@@ -101,6 +128,9 @@ function classify(raw: string): FieldSide {
   // omission visible.
   if (/^(none|not ordered|n\/a|-|—)$/i.test(value)) {
     return { status: 'none', value: 'Not ordered' }
+  }
+  if (!isKnownValue(key, value)) {
+    return { status: 'invalid', value }
   }
   return { status: 'set', value }
 }
@@ -135,7 +165,7 @@ export function parsePrescriptionState(content: string): PrescriptionState | nul
       continue
     }
 
-    const side = classify(rawValue)
+    const side = classify(key, rawValue)
     const which = (rawSide ?? 'B').toUpperCase()
 
     if (which === 'L' || which === 'B') {

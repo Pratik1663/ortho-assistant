@@ -1144,3 +1144,44 @@ textarea:focus-visible {
   font-size: 0.76rem;
 }
 
+/* ---------------------------------------------------------------
+   Flagged prescription values — Ask LEOPA
+   Append to the end of src/styles.css
+
+   A value that is not on the LEO Lab form is worse than a missing one:
+   it reads as decided. These are marked rather than hidden, so the
+   practitioner can correct them before the order goes out.
+   --------------------------------------------------------------- */
+
+.rx-cell.invalid {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #a5341f;
+  font-weight: 700;
+}
+
+.rx-flag {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #c0392b;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rx-panel-flag {
+  border: 1px solid #f0c8c0;
+  border-radius: 999px;
+  padding: 1px 9px;
+  color: #a5341f;
+  background: #fdeeeb;
+  font-size: 0.71rem;
+  font-weight: 700;
+}
+
