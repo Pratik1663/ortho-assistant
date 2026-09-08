@@ -43,10 +43,10 @@ test('unknown values do not pass by containing a valid substring', () => {
   }
   assert.equal(parse(snapshot({ rigidity: '3DP Semi-Rigid' })).rigidity.left.status, 'set')
 })
-test('an open side does not count as settled; all-none is not acceptable', () => {
+test('an open side does not count as settled but does not block acceptance; all-none is not acceptable', () => {
   const partial = proposal.replace('width @B = Regular', 'width @L = Regular\nwidth @R =')
   assert.equal(countSettled(parse(partial)).settled, 15)
-  assert.equal(acceptanceReply(partial), null)
+  assert.ok(acceptanceReply(partial))
   assert.equal(canAcceptPrescription(parse(snapshot(Object.fromEntries(RX_FIELDS.map(({key}) => [key, 'none']))))), false)
 })
 test('no stale prescription after a failed or missing reply', () => {
@@ -133,13 +133,13 @@ test('message renderer displays recommendation bolding and hides prescription ma
   assert.ok(html.includes('<strong>Semi-Rigid</strong>'))
   assert.ok(!html.includes('[[RX'))
 })
-test('panel labels proposals separately and blocks acceptance with open values', () => {
+test('panel labels proposals separately and allows acceptance with open values', () => {
   const React = require('react')
   const { renderToStaticMarkup } = require('react-dom/server')
   const Panel = require('../.test-build/src/components/PrescriptionPanel.cjs').default
   const draft = renderToStaticMarkup(React.createElement(Panel,{state:parse(snapshot({width:''})),onAccept:()=>{}}))
   assert.ok(draft.includes('Suggested prescription'))
-  assert.match(draft, /disabled=""[^>]*>Accept prescription/)
+  assert.ok(draft.includes('>Accept prescription<'))
   const confirmed = renderToStaticMarkup(React.createElement(Panel,{state:parse(proposal),confirmed:true,onAccept:()=>{}}))
   assert.ok(confirmed.includes('Accepted by practitioner'))
   assert.ok(!confirmed.includes('>Accept prescription<'))

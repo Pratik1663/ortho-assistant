@@ -225,9 +225,25 @@ export function prescriptionSummary(state: PrescriptionState): string {
   }).join('\n')
 }
 
+/**
+ * A prescription can be accepted with fields still open.
+ *
+ * An open field is a deliberate outcome, not an incomplete one — a practitioner
+ * who leaves posting blank is ordering no post, and blocking them until every
+ * line is filled forces a value nobody wanted. What acceptance requires is that
+ * something was actually decided, not that everything was.
+ */
 export function canAcceptPrescription(state: PrescriptionState): boolean {
-  return countSettled(state).settled === RX_FIELDS.length &&
-    RX_FIELDS.some(({ key }) => state[key].left.status === 'set' || state[key].right.status === 'set')
+  // A value that is not on the form still blocks acceptance — that is an error,
+  // not a decision. So does a prescription where nothing at all was ordered.
+  const noneInvalid = RX_FIELDS.every(
+    ({ key }) =>
+      state[key].left.status !== 'invalid' && state[key].right.status !== 'invalid',
+  )
+  const somethingOrdered = RX_FIELDS.some(
+    ({ key }) => state[key].left.status === 'set' || state[key].right.status === 'set',
+  )
+  return noneInvalid && somethingOrdered
 }
 
 export function acceptanceReply(content: string): string | null {
