@@ -21,8 +21,15 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const knowledgeBase = readFileSync(join(root, 'assets/knowledge_base.md'), 'utf8')
-const formOptions = readFileSync(join(root, 'src/formOptions.ts'), 'utf8')
+// Line endings are normalised on read. Git checks these files out as CRLF on
+// Windows, and the paragraph detection below looks for a blank line as \n\n —
+// with a \r between them it never matches, the whole section collapses into one
+// line, and prose written under an option list gets read as if it were part of
+// it. That produced two false mismatches and a failed build.
+const read = (path) => readFileSync(join(root, path), 'utf8').replace(/\r\n/g, '\n')
+
+const knowledgeBase = read('assets/knowledge_base.md')
+const formOptions = read('src/formOptions.ts')
 
 /**
  * Which exported constant should match which section, and how to read the
