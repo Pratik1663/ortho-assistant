@@ -163,7 +163,7 @@ export default function DoctorView({
   const [stagedOption, setStagedOption] = useState<StagedOption | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
 
-  const { state: prescription, confirmed: prescriptionConfirmed } = currentPrescription(currentConversation?.messages ?? [])
+  const { state: prescription, confirmed: prescriptionConfirmed, pendingQuestions } = currentPrescription(currentConversation?.messages ?? [])
 
   // A change made in the panel is sent as an ordinary message, so LEOPA sees it
   // the same way as anything typed and the conversation stays the record.
@@ -547,6 +547,7 @@ export default function DoctorView({
                       onEdit={handleFieldEdit}
                       state={prescription}
                       confirmed={prescriptionConfirmed}
+                      pendingQuestions={pendingQuestions}
                       onAccept={() => onSend(ACCEPT_PRESCRIPTION, [])}
                     />
                   )}

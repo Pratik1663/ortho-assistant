@@ -256,3 +256,27 @@ test('panel exposes open values and explains conditional acceptance blockers', (
   assert.ok(html.includes('Resolve the flagged values'))
   assert.ok(html.includes('disabled=""'))
 })
+
+test('questions outside a complete snapshot block acceptance', () => {
+  for (const question of ['Heel pain character [[OPTIONS Heel pain: Focal | Diffuse]]', 'Is heel pain focal or diffuse?', 'Depth [[INPUT Depth: mm]]']) {
+    const draft = question + '\n' + proposal
+    assert.equal(acceptanceReply(draft, []), null)
+    assert.equal(current([{role:'assistant', content:draft}]).pendingQuestions, true)
+    const legacy = `Practitioner-confirmed prescription\n${prescriptionSummary(parse(draft))}\n\n${draft.match(/\[\[RX[\s\S]*?\]\]/)[0]}`
+    assert.equal(current([{role:'assistant',content:draft},{role:'user',content:ACCEPT_PRESCRIPTION},{role:'assistant',content:legacy}]).confirmed, false)
+  }
+})
+test('answered question followed by a refreshed proposal can be accepted', () => {
+  const history = [{role:'assistant',content:'Select an option?\n'+proposal},{role:'user',content:'SAMPLE RESPONSE'},{role:'assistant',content:proposal}]
+  const reply = acceptanceReply(proposal, history)
+  assert.ok(reply)
+  assert.equal(current([...history,{role:'user',content:ACCEPT_PRESCRIPTION},{role:'assistant',content:reply}]).confirmed,true)
+})
+test('pending questions disable panel acceptance even with all fields valid', () => {
+  const React = require('react')
+  const {renderToStaticMarkup} = require('react-dom/server')
+  const Panel = require('../.test-build/src/components/PrescriptionPanel.cjs').default
+  const html = renderToStaticMarkup(React.createElement(Panel,{state:parse(proposal),pendingQuestions:true,onAccept:()=>{}}))
+  assert.ok(html.includes('Answer the questions below'))
+  assert.match(html, /disabled=""[^>]*>Accept prescription/)
+})

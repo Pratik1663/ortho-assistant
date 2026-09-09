@@ -288,7 +288,16 @@ function prescriptionBlock(state: PrescriptionState): string {
   return `[[RX\n${lines.join('\n')}\n]]`
 }
 
+/** Questions in the visible proposal must be resolved before whole-build acceptance.
+ * This is a workflow gate, not a clinical indication classifier.
+ */
+export function hasPendingQuestions(content: string): boolean {
+  const visible = content.replace(RX_BLOCK, '')
+  return /\[\[(?:OPTIONS|INPUT)\b/i.test(visible) || visible.includes('?')
+}
+
 export function acceptanceReply(content: string, messages: RxMessage[] = []): string | null {
+  if (hasPendingQuestions(content)) return null
   const parsed = parsePrescriptionState(content)
   const state = parsed ? sanitisePrescription(parsed, messages) : null
   if (!state || !canAcceptPrescription(state)) return null
@@ -425,7 +434,7 @@ export function sanitiseProse(text: string, messages: RxMessage[]): string {
 }
 
 export function currentPrescription(messages: RxMessage[]): {
-  state: PrescriptionState | null; confirmed: boolean
+  state: PrescriptionState | null; confirmed: boolean; pendingQuestions: boolean
 } {
   const last = messages[messages.length - 1]
   const parsed = last?.role === 'assistant' ? parsePrescriptionState(last.content) : null
@@ -442,6 +451,7 @@ export function currentPrescription(messages: RxMessage[]): {
   const matchesLegacy = previous?.role === 'assistant' &&
     legacyAcceptanceReply(previous.content) === last.content
   const confirmed = Boolean(state && request?.role === 'user' &&
-    request.content === ACCEPT_PRESCRIPTION && (matchesCurrent || matchesLegacy))
-  return { state, confirmed }
+    request.content === ACCEPT_PRESCRIPTION && previous?.role === 'assistant' &&
+    !hasPendingQuestions(previous.content) && (matchesCurrent || matchesLegacy))
+  return { state, confirmed, pendingQuestions: Boolean(last?.role === 'assistant' && hasPendingQuestions(last.content)) }
 }

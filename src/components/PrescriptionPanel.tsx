@@ -21,6 +21,7 @@ export interface FieldEdit {
 
 interface PrescriptionPanelProps {
   state: PrescriptionState
+  pendingQuestions?: boolean
   confirmed?: boolean
   onAccept?: () => void
   onEdit?: (edit: FieldEdit) => void
@@ -97,7 +98,7 @@ function renderValue(side: FieldSide) {
  * Rows are clickable so a field can be corrected where it is shown, rather
  * than by hunting back through the conversation for where it was decided.
  */
-function PrescriptionPanel({ state, onEdit, disabled, confirmed = false, onAccept }: PrescriptionPanelProps) {
+function PrescriptionPanel({ state, onEdit, disabled, confirmed = false, pendingQuestions = false, onAccept }: PrescriptionPanelProps) {
   // Collapsed by default. The header carries the counts, which is the part
   // worth seeing continuously; the rows are for when you want to check.
   const [open, setOpen] = useState(true)
@@ -157,11 +158,12 @@ function PrescriptionPanel({ state, onEdit, disabled, confirmed = false, onAccep
         <span>{confirmed ? 'Accepted by practitioner' : 'Awaiting practitioner acceptance'}</span>
         {!confirmed && onAccept && (
           <button type="button" className="workflow-primary" onClick={onAccept}
-            disabled={disabled || !canAcceptPrescription(state)}>
+            disabled={disabled || pendingQuestions || !canAcceptPrescription(state)}>
             Accept prescription
           </button>
         )}
       </div>
+      {!confirmed && pendingQuestions && <p role="alert">Answer the questions below and review the updated proposal before accepting. Listed items remain suggestions.</p>}
       {!confirmed && flagged > 0 && <p role="alert">Resolve the flagged values before accepting. Choose one form value and clarify any conditional items.</p>}
       {!confirmed && settled < total && <p>Open means undecided. It does not mean “Not ordered.” Review open fields before accepting.</p>}
       {open && (
