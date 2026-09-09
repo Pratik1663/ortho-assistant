@@ -156,3 +156,32 @@ test('a list field split across lines merges; other repeats still fail closed', 
   // A single-value field repeated is still an error, not a continuation.
   assert.equal(parse(proposal.replace('heel_cup @B = 16mm', 'heel_cup @B = 16mm\nheel_cup @B = 18mm')), null)
 })
+
+test('figures and fabrication choices the practitioner never gave are stripped', () => {
+  const { sanitisePrescription } = require('../.test-build/src/prescriptionState.cjs')
+  const invented = parse(snapshot({
+    rearfoot_posting: 'Intrinsic varus 2°',
+    heel_skive: 'Medial 2mm',
+    heel_lift: '4mm',
+    rigidity: 'Semi-Rigid (Poly)',
+  }))
+  const asked = [{ role: 'user', content: 'Build me the prescription.' }]
+  const clean = sanitisePrescription(invented, asked)
+  // The item stays indicated; the number the practitioner never gave does not.
+  assert.equal(clean.rearfoot_posting.left.value, 'varus')
+  assert.equal(clean.heel_skive.left.value, 'Medial')
+  assert.equal(clean.heel_lift.left.status, 'open')
+  assert.equal(clean.rigidity.left.value, 'Semi-Rigid')
+})
+
+test('figures and fabrication the practitioner did give are preserved exactly', () => {
+  const { sanitisePrescription } = require('../.test-build/src/prescriptionState.cjs')
+  const given = parse(snapshot({
+    rearfoot_posting: 'Extrinsic varus 4°',
+    heel_skive: 'Medial 3mm',
+  }))
+  const said = [{ role: 'user', content: 'Extrinsic, 4 degrees varus, 3mm medial skive.' }]
+  const clean = sanitisePrescription(given, said)
+  assert.equal(clean.rearfoot_posting.left.value, 'Extrinsic varus 4°')
+  assert.equal(clean.heel_skive.left.value, 'Medial 3mm')
+})

@@ -279,11 +279,104 @@ export function acceptanceReply(content: string): string | null {
   return `Practitioner-confirmed prescription\n${prescriptionSummary(state)}\n\n${content.match(RX_BLOCK)![0]}`
 }
 
+
+/**
+ * Strip decisions the model is not entitled to make.
+ *
+ * Three things kept reappearing no matter how the prompt was worded: exact
+ * posting degrees and skive depths the practitioner never gave, a choice of
+ * intrinsic or extrinsic, and a shell named as Poly or 3DP. Each is a decision
+ * that belongs to the prescriber or the lab, and each reads as settled once it
+ * is written down.
+ *
+ * Prompt wording lost to prompt wording repeatedly, so this is done in code.
+ * A figure survives only if it appears in something the practitioner actually
+ * typed; otherwise the qualitative part is kept and the number is dropped.
+ */
+const NUMERIC_FIELDS = new Set(['rearfoot_posting', 'heel_skive', 'heel_lift'])
+const FABRICATION_TERMS = /\b(intrinsic|extrinsic|poly ?pro|poly|3dp)\b/gi
+const NUMBER_TOKEN = /\d+(?:\.\d+)?\s*(?:°|deg(?:rees)?|mm|cm)?/gi
+
+function practitionerFigures(messages: RxMessage[]): Set<string> {
+  const said = new Set<string>()
+  for (const message of messages) {
+    if (message.role !== 'user') continue
+    for (const match of message.content.matchAll(/\d+(?:\.\d+)?/g)) {
+      said.add(match[0])
+    }
+  }
+  return said
+}
+
+function practitionerSaidFabrication(messages: RxMessage[]): boolean {
+  return messages.some(
+    (message) => message.role === 'user' && /\b(intrinsic|extrinsic|poly|3dp)\b/i.test(message.content),
+  )
+}
+
+function stripUnearned(
+  key: string,
+  value: string,
+  figures: Set<string>,
+  keepFabrication: boolean,
+): string {
+  let out = value
+
+  if (!keepFabrication) {
+    out = out.replace(FABRICATION_TERMS, '')
+  }
+
+  if (NUMERIC_FIELDS.has(key)) {
+    out = out.replace(NUMBER_TOKEN, (token) => {
+      const digits = token.match(/\d+(?:\.\d+)?/)?.[0] ?? ''
+      return figures.has(digits) ? token : ''
+    })
+  }
+
+  // Tidy the punctuation left behind by a removed word or figure.
+  out = out.replace(/\(\s*\)/g, '').replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',')
+  out = out.replace(/^[\s,;-]+|[\s,;-]+$/g, '').trim()
+  return out
+}
+
+/**
+ * Apply the above across a parsed prescription. A field left with nothing but
+ * a direction ("Medial") keeps it — the item is still indicated, the figure is
+ * simply the prescriber's to add. A field left with nothing at all becomes
+ * open rather than silently reading as not ordered.
+ */
+export function sanitisePrescription(
+  state: PrescriptionState,
+  messages: RxMessage[],
+): PrescriptionState {
+  const figures = practitionerFigures(messages)
+  const keepFabrication = practitionerSaidFabrication(messages)
+  const next: PrescriptionState = {}
+
+  for (const { key } of RX_FIELDS) {
+    const entry = state[key]
+    const clean = (side: FieldSide): FieldSide => {
+      // Invalid values are cleaned too, not skipped. "Semi-Rigid (Poly)" fails
+      // validation precisely because of the part that should not be there, and
+      // stripping it leaves a value that is both correct and valid.
+      if (side.status !== 'set' && side.status !== 'invalid') return { ...side }
+      const value = stripUnearned(key, side.value, figures, keepFabrication)
+      if (value.length === 0) return { status: 'open', value: '' }
+      // Re-classify so a repaired value stops reading as an error.
+      return classify(key, value)
+    }
+    next[key] = { left: clean(entry.left), right: clean(entry.right) }
+  }
+
+  return next
+}
+
 export function currentPrescription(messages: RxMessage[]): {
   state: PrescriptionState | null; confirmed: boolean
 } {
   const last = messages[messages.length - 1]
-  const state = last?.role === 'assistant' ? parsePrescriptionState(last.content) : null
+  const parsed = last?.role === 'assistant' ? parsePrescriptionState(last.content) : null
+  const state = parsed ? sanitisePrescription(parsed, messages) : null
   // Compare the deterministic summary against the exact snapshot accepted.
   const request = messages[messages.length - 2]
   const previous = messages[messages.length - 3]
