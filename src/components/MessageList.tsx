@@ -1,3 +1,4 @@
+import { sanitiseProse } from '../prescriptionState'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Message } from '../App'
 import { parseAssistantMessage } from '../formOptions'
@@ -193,7 +194,11 @@ function MessageList({
 
                 return (
                   <span key={segmentIndex}>
-                    {withEmphasis(segment.text)}
+                    {withEmphasis(
+                      message.role === 'assistant'
+                        ? sanitiseProse(segment.text, messages)
+                        : segment.text,
+                    )}
                     {(showChips || showInput) && needsLabel && (
                       <span className="option-group-label">{segment.label}</span>
                     )}

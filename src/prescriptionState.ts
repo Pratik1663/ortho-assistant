@@ -371,6 +371,36 @@ export function sanitisePrescription(
   return next
 }
 
+
+/**
+ * The same strip, applied to the visible reply.
+ *
+ * The panel and the summary were already protected, but the prose was not — a
+ * reply reading "heel lift 6mm bilaterally" while the summary said the
+ * millimetres were open is worse than either alone, because the practitioner
+ * reads the number, believes it, and only finds the disagreement after
+ * accepting.
+ *
+ * Only figures attached to the three prescriber-owned fields are touched, and
+ * only single figures: a range is guidance and stays, since "4 to 6mm" is
+ * exactly what should be offered. Heel cup depths, thicknesses and everything
+ * else the model is entitled to choose are left alone.
+ */
+const PROSE_FIGURE =
+  /\b(heel lift|rearfoot post(?:ing)?|forefoot post(?:ing)?|medial skive|lateral skive|heel skive|skive)\b([^.\n]{0,40}?)(\d+(?:\.\d+)?)\s*(mm|°|deg(?:rees)?)/gi
+
+export function sanitiseProse(text: string, messages: RxMessage[]): string {
+  const figures = practitionerFigures(messages)
+
+  return text.replace(PROSE_FIGURE, (whole, field, gap, digits, unit, offset: number) => {
+    if (figures.has(digits)) return whole
+    // A range reads as guidance rather than a decision, so it survives.
+    const before = text.slice(Math.max(0, offset - 12), offset + whole.length + 6)
+    if (/\d\s*(?:-|–|—|to)\s*\d/.test(before)) return whole
+    return `${field}${gap}`.replace(/[\s,]+$/, '')
+  })
+}
+
 export function currentPrescription(messages: RxMessage[]): {
   state: PrescriptionState | null; confirmed: boolean
 } {

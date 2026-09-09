@@ -185,3 +185,19 @@ test('figures and fabrication the practitioner did give are preserved exactly', 
   assert.equal(clean.rearfoot_posting.left.value, 'Extrinsic varus 4°')
   assert.equal(clean.heel_skive.left.value, 'Medial 3mm')
 })
+
+test('prose figures the practitioner never gave are stripped; ranges survive', () => {
+  const { sanitiseProse } = require('../.test-build/src/prescriptionState.cjs')
+  const asked = [{ role: 'user', content: 'Build me the prescription.' }]
+  assert.equal(
+    sanitiseProse('Heel lift 6mm bilaterally reduces tension.', asked),
+    'Heel lift bilaterally reduces tension.',
+  )
+  // A range is guidance, not a decision, so it stays.
+  assert.match(sanitiseProse('Medial skive 2-4mm depending on correction.', asked), /2-4mm/)
+  // A heel cup depth is the model's to choose and must not be touched.
+  assert.match(sanitiseProse('Heel cup 16mm contains the fat pad.', asked), /16mm/)
+  // A figure the practitioner gave is preserved.
+  const said = [{ role: 'user', content: 'Use a 6mm lift.' }]
+  assert.match(sanitiseProse('Heel lift 6mm bilaterally.', said), /6mm/)
+})
