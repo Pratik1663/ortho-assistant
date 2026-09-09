@@ -273,7 +273,26 @@ export function canAcceptPrescription(state: PrescriptionState): boolean {
   return noneInvalid && somethingOrdered
 }
 
-export function acceptanceReply(content: string): string | null {
+function prescriptionBlock(state: PrescriptionState): string {
+  const value = (side: FieldSide) => side.status === 'open'
+    ? ''
+    : side.status === 'none' ? 'none' : side.value
+  const lines = RX_FIELDS.flatMap(({ key }) => [
+    `${key} @L = ${value(state[key].left)}`,
+    `${key} @R = ${value(state[key].right)}`,
+  ])
+  return `[[RX\n${lines.join('\n')}\n]]`
+}
+
+export function acceptanceReply(content: string, messages: RxMessage[] = []): string | null {
+  const parsed = parsePrescriptionState(content)
+  const state = parsed ? sanitisePrescription(parsed, messages) : null
+  if (!state || !canAcceptPrescription(state)) return null
+  return `Practitioner-confirmed prescription\n${prescriptionSummary(state)}\n\n${prescriptionBlock(state)}`
+}
+
+/** Match confirmations saved before acceptance-time sanitisation was introduced. */
+function legacyAcceptanceReply(content: string): string | null {
   const state = parsePrescriptionState(content)
   if (!state || !canAcceptPrescription(state)) return null
   return `Practitioner-confirmed prescription\n${prescriptionSummary(state)}\n\n${content.match(RX_BLOCK)![0]}`
@@ -410,8 +429,15 @@ export function currentPrescription(messages: RxMessage[]): {
   // Compare the deterministic summary against the exact snapshot accepted.
   const request = messages[messages.length - 2]
   const previous = messages[messages.length - 3]
+  const messagesBeforeAcceptance = messages.slice(0, -2)
+  const matchesCurrent = previous?.role === 'assistant' &&
+    acceptanceReply(previous.content, messagesBeforeAcceptance) === last.content
+  // Existing browser records contain the old deterministic format. Continue to
+  // recognise those exact snapshots, while `state` above is still sanitised for
+  // the panel and downstream SOAP generation.
+  const matchesLegacy = previous?.role === 'assistant' &&
+    legacyAcceptanceReply(previous.content) === last.content
   const confirmed = Boolean(state && request?.role === 'user' &&
-    request.content === ACCEPT_PRESCRIPTION && previous?.role === 'assistant' &&
-    acceptanceReply(previous.content) === last.content)
+    request.content === ACCEPT_PRESCRIPTION && (matchesCurrent || matchesLegacy))
   return { state, confirmed }
 }

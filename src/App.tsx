@@ -705,7 +705,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
     if (content.trim() === ACCEPT_PRESCRIPTION && workspace !== 'quick' && currentPatient && currentConversation) {
       const messages = currentConversation.messages
       const last = messages[messages.length - 1]
-      const reply = last?.role === 'assistant' ? acceptanceReply(last.content) : null
+      const reply = last?.role === 'assistant' ? acceptanceReply(last.content, messages) : null
       if (!reply) {
         setErrorMessage('Resolve open or flagged prescription fields before accepting.')
         return

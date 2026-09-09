@@ -1,6 +1,6 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
-const { RX_FIELDS, parsePrescriptionState: parse, currentPrescription: current, acceptanceReply, ACCEPT_PRESCRIPTION, canAcceptPrescription, countSettled } = require('../.test-build/src/prescriptionState.cjs')
+const { RX_FIELDS, parsePrescriptionState: parse, currentPrescription: current, acceptanceReply, prescriptionSummary, ACCEPT_PRESCRIPTION, canAcceptPrescription, countSettled } = require('../.test-build/src/prescriptionState.cjs')
 const { readChatStream } = require('../.test-build/src/chatStream.cjs')
 const { parseAssistantMessage } = require('../.test-build/src/formOptions.cjs')
 const values = { style: 'Sport Performance', rigidity: 'Semi-Rigid', width: 'Regular', cast_dressing: 'Moderate', heel_cup: '16mm', topcover: 'Bamboo 1/8"', topcover_length: 'Full Length', bottom_cover: 'Vinyl', skid_plate: 'No' }
@@ -16,6 +16,15 @@ test('acceptance preserves exact snapshot and includes every field', () => {
   assert.equal(current(accepted).confirmed, true)
   for (const { label } of RX_FIELDS) assert.ok(accepted[2].content.includes(label + ':'))
   assert.deepEqual(parse(accepted[2].content), parse(proposal))
+})
+test('confirmations saved before acceptance sanitisation remain confirmed', () => {
+  const oldReply = `Practitioner-confirmed prescription\n${prescriptionSummary(parse(proposal))}\n\n${proposal.match(/\[\[RX[\s\S]*?\]\]/)[0]}`
+  const oldAccepted = [
+    { role: 'assistant', content: proposal },
+    { role: 'user', content: ACCEPT_PRESCRIPTION },
+    { role: 'assistant', content: oldReply },
+  ]
+  assert.equal(current(oldAccepted).confirmed, true)
 })
 test('silence, edits, and a model claim cannot confirm a proposal', () => {
   assert.equal(current([...accepted, { role: 'user', content: 'Change right heel cup to 18mm.' }]).confirmed, false)
@@ -172,6 +181,28 @@ test('figures and fabrication choices the practitioner never gave are stripped',
   assert.equal(clean.heel_skive.left.value, 'Medial')
   assert.equal(clean.heel_lift.left.status, 'open')
   assert.equal(clean.rigidity.left.value, 'Semi-Rigid')
+})
+
+test('acceptance strips invented figures from the confirmed summary and snapshot', () => {
+  const invented = snapshot({
+    rearfoot_posting: 'Intrinsic varus 2°',
+    heel_skive: 'Medial 3mm',
+    heel_lift: '5mm bilateral',
+    rigidity: 'Semi-Rigid (Poly)',
+  })
+  const history = [{ role: 'user', content: 'Build me the prescription.' }, { role: 'assistant', content: invented }]
+  const reply = acceptanceReply(invented, history)
+
+  assert.ok(reply)
+  assert.doesNotMatch(reply, /2°|3mm|5mm|\bPoly\b|\bIntrinsic\b/i)
+  assert.match(reply, /Rearfoot posting: Left — varus; Right — varus/)
+  assert.match(reply, /Heel skive: Left — Medial; Right — Medial/)
+  assert.match(reply, /Heel lift: Left — bilateral; Right — bilateral/)
+
+  const acceptedHistory = [...history, { role: 'user', content: ACCEPT_PRESCRIPTION }, { role: 'assistant', content: reply }]
+  const result = current(acceptedHistory)
+  assert.equal(result.confirmed, true)
+  assert.equal(result.state.heel_lift.left.value, 'bilateral')
 })
 
 test('figures and fabrication the practitioner did give are preserved exactly', () => {
