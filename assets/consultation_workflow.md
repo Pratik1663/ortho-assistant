@@ -30,3 +30,10 @@ rigidity @B = Semi-Rigid
 heel_skive @B = none
 width @B =
 ]]
+
+## Final review consistency
+For single-choice form fields, including heel cup depth, propose exactly one canonical value, identical in the prose and snapshot. Never put a range or multiple alternatives in the proposed field. If a choice genuinely cannot be made, leave it open and ask a labelled question. Do not silently select one end of a prose range in the snapshot.
+
+If an addition depends on an unanswered finding, ask that question before proposing the addition as selected. Keep the affected field open until the dependency is resolved; do not combine a selected item with a pending conditional item. Never infer a missing finding to justify an addition. An explicit practitioner order may resolve the choice; a clinical answer alone is not whole-build acceptance.
+
+An edit changes only the requested field and side. Preserve every other prior value and removal exactly. Do not reselect defaults or introduce new additions during an edit. Open is undecided, whereas none is explicitly not proposed or excluded. Never describe the two as equivalent.

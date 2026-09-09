@@ -232,3 +232,27 @@ test('prose figures the practitioner never gave are stripped; ranges survive', (
   const said = [{ role: 'user', content: 'Use a 6mm lift.' }]
   assert.match(sanitiseProse('Heel lift 6mm bilaterally.', said), /6mm/)
 })
+
+test('conditional modifications cannot be accepted as unconditional orders', () => {
+  for (const value of ['Fascial Accommodation (if arch contact tender — pending Q2)', 'Heel Cushion, consider additional padding', 'SAMPLE RESPONSE unless confirmed']) {
+    const draft = snapshot({ additions: value })
+    assert.equal(current([{role:'assistant', content:draft}]).state.additions.left.status, 'invalid')
+    assert.equal(acceptanceReply(draft, []), null)
+  }
+})
+test('heel cup ranges require a single selection and one-sided edits preserve the opposite value', () => {
+  assert.equal(acceptanceReply(snapshot({heel_cup:'14–16 mm'}), []), null)
+  const draft = proposal.replace('heel_cup @B = 16mm', 'heel_cup @L = 12mm\nheel_cup @R = 16mm')
+  const state = parse(acceptanceReply(draft, []))
+  assert.equal(state.heel_cup.left.value, '12mm')
+  assert.equal(state.heel_cup.right.value, '16mm')
+})
+test('panel exposes open values and explains conditional acceptance blockers', () => {
+  const React = require('react')
+  const {renderToStaticMarkup} = require('react-dom/server')
+  const Panel = require('../.test-build/src/components/PrescriptionPanel.cjs').default
+  const html = renderToStaticMarkup(React.createElement(Panel, {state:parse(snapshot({heel_lift:'', additions:'SAMPLE RESPONSE (pending answer)'})), onAccept:()=>{}}))
+  assert.ok(html.includes('>Open</span>'))
+  assert.ok(html.includes('Resolve the flagged values'))
+  assert.ok(html.includes('disabled=""'))
+})

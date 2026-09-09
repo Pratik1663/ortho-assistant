@@ -67,7 +67,7 @@ function renderValue(side: FieldSide) {
   if (side.status === 'open') {
     // Deliberately empty rather than dashed. An unanswered field should read as
     // unanswered at a glance; that is the whole reason the panel exists.
-    return <span className="rx-cell open" aria-label="Not yet decided" />
+    return <span className="rx-cell open" aria-label="Not yet decided">Open</span>
   }
   if (side.status === 'invalid') {
     // A value that is not on the form is worse than a missing one, because it
@@ -75,7 +75,7 @@ function renderValue(side: FieldSide) {
     return (
       <span
         className="rx-cell invalid"
-        title="Not an option on the LEO Lab form — check this before ordering"
+        title="Unresolved condition or unsupported form value — edit this before accepting"
       >
         {side.value}
         <span aria-hidden="true" className="rx-flag">
@@ -84,7 +84,7 @@ function renderValue(side: FieldSide) {
       </span>
     )
   }
-  return <span className={`rx-cell ${side.status}`}>{side.status === 'none' ? 'None' : side.value}</span>
+  return <span className={`rx-cell ${side.status}`}>{side.status === 'none' ? 'Not ordered' : side.value}</span>
 }
 
 /**
@@ -100,7 +100,7 @@ function renderValue(side: FieldSide) {
 function PrescriptionPanel({ state, onEdit, disabled, confirmed = false, onAccept }: PrescriptionPanelProps) {
   // Collapsed by default. The header carries the counts, which is the part
   // worth seeing continuously; the rows are for when you want to check.
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [editing, setEditing] = useState<string | null>(null)
   // Which foot the open editor will change. Null means the field as a whole.
   const [target, setTarget] = useState<'L' | 'R' | null>(null)
@@ -162,6 +162,8 @@ function PrescriptionPanel({ state, onEdit, disabled, confirmed = false, onAccep
           </button>
         )}
       </div>
+      {!confirmed && flagged > 0 && <p role="alert">Resolve the flagged values before accepting. Choose one form value and clarify any conditional items.</p>}
+      {!confirmed && settled < total && <p>Open means undecided. It does not mean “Not ordered.” Review open fields before accepting.</p>}
       {open && (
         <div className="rx-panel-body">
           <div className="rx-row rx-head">

@@ -707,7 +707,7 @@ function ClinicApp({ session, onLogout }: ClinicAppProps) {
       const last = messages[messages.length - 1]
       const reply = last?.role === 'assistant' ? acceptanceReply(last.content, messages) : null
       if (!reply) {
-        setErrorMessage('Resolve open or flagged prescription fields before accepting.')
+        setErrorMessage('Resolve flagged prescription fields before accepting. Open fields may remain undecided.')
         return
       }
       updateConversation(currentPatient.id, currentConversation.id, (conversation) => ({

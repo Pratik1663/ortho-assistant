@@ -128,6 +128,10 @@ function classify(key: string, raw: string): FieldSide {
   if (/^(none|not ordered|n\/a|-|—)$/i.test(value)) {
     return { status: 'none', value: 'Not ordered' }
   }
+  // A conditional item must never become an unconditional order by stripping advice.
+  if (/\b(if|unless|pending|consider|depending|confirm with|subject to|provided that)\b/i.test(value)) {
+    return { status: 'invalid', value }
+  }
   if (!isKnownValue(key, value)) {
     return { status: 'invalid', value }
   }
